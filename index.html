@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>徹子AI 音声版</title>
+
+<style>
+body{
+  margin:0;
+  background:#111;
+  color:#fff;
+  font-family:sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.box{
+  background:#222;
+  padding:20px;
+  border-radius:15px;
+  text-align:center;
+  width:90%;
+  max-width:400px;
+}
+
+button{
+  padding:12px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  background:#4caf50;
+  color:#fff;
+  font-size:16px;
+}
+
+select{
+  padding:10px;
+  border-radius:10px;
+  margin:10px;
+}
+
+textarea{
+  width:100%;
+  height:80px;
+  border-radius:10px;
+  padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+  <h2>🎤 徹子AI 音声</h2>
+
+  <textarea id="text">こんにちは、徹子です。</textarea>
+
+  <br>
+
+  <select id="mode">
+    <option value="eleven">ElevenLabs</option>
+    <option value="browser">ブラウザ音声</option>
+  </select>
+
+  <br>
+
+  <button onclick="unlockAudio()">① 初回タップ</button>
+  <button onclick="speak()">再生</button>
+</div>
+
+<script>
+let unlocked = false;
+
+// 🔓 最初のタップで音声解放（超重要）
+function unlockAudio(){
+  const a = new Audio();
+  a.src = "";
+  a.play().catch(()=>{});
+  unlocked = true;
+  alert("音声解放OK");
+}
+
+// 🔊 再生
+async function speak(){
+  if(!unlocked){
+    alert("先に①初回タップして");
+    return;
+  }
+
+  const text = document.getElementById("text").value;
+  const mode = document.getElementById("mode").value;
+
+  if(mode === "browser"){
+    const uttr = new SpeechSynthesisUtterance(text);
+    uttr.pitch = 1.2;
+    uttr.rate = 1;
+    speechSynthesis.speak(uttr);
+  }else{
+    // ⚠️ GitHubでは直接APIキー使えない
+    // 仮：音声ダミー or 後でVercelに切り替え
+
+    alert("ElevenLabsはVercel接続後に有効化");
+  }
+}
+</script>
+
+</body>
+</html>
