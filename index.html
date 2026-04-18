@@ -85,32 +85,67 @@ input, select{
 <div class="main" id="screen"></div>
 
 <div class="nav">
-  <div onclick="changeTab('home')" class="active">🏠<br>ホーム</div>
-  <div onclick="changeTab('study')">📚<br>学習</div>
-  <div onclick="changeTab('ai')">🤖<br>AI</div>
-  <div onclick="changeTab('setting')">⚙️<br>設定</div>
+  <div onclick="changeTab('home', this)" class="active">🏠<br>ホーム</div>
+  <div onclick="changeTab('study', this)">📚<br>学習</div>
+  <div onclick="changeTab('ai', this)">🤖<br>AI</div>
+  <div onclick="changeTab('setting', this)">⚙️<br>設定</div>
 </div>
 
 <script>
-// 🔥 保存データ
+// 🔥 設定
 let settings = JSON.parse(localStorage.getItem("settings")) || {
   theme:"dark",
   personality:"normal",
-  examDate:""
+  examDate:"",
+  voice:true
 };
 
-// 🔥 初期反映
+// 🔊 音声エンジン
+let speaking = false;
+
+function speakText(text){
+  if(!settings.voice) return;
+
+  if(speaking){
+    speechSynthesis.cancel();
+  }
+
+  const uttr = new SpeechSynthesisUtterance(text);
+  uttr.lang = "ja-JP";
+
+  if(settings.personality === "strict"){
+    uttr.pitch = 0.8;
+    uttr.rate = 1.1;
+  }
+  else if(settings.personality === "friend"){
+    uttr.pitch = 1.4;
+    uttr.rate = 1;
+  }
+  else{
+    uttr.pitch = 1.2;
+    uttr.rate = 1;
+  }
+
+  speaking = true;
+  uttr.onend = ()=> speaking = false;
+
+  speechSynthesis.speak(uttr);
+}
+
+// 初期テーマ
 applyTheme();
 
 // 画面切り替え
-function changeTab(tab){
+function changeTab(tab, el){
   let html = "";
 
   if(tab === "home"){
+    const msg = getMessage();
     html = `
     <div class="card">
       <h3>今日の一言</h3>
-      <p>${getMessage()}</p>
+      <p>${msg}</p>
+      <div class="btn" onclick="speakText('${msg}')">読み上げ</div>
     </div>
 
     <div class="card">
@@ -118,6 +153,8 @@ function changeTab(tab){
       <p>${getCountdown()}</p>
     </div>
     `;
+
+    speakText(msg);
   }
 
   if(tab === "study"){
@@ -125,6 +162,7 @@ function changeTab(tab){
     <div class="card">
       <h3>学習</h3>
       <p>ここに問題表示（次で作る）</p>
+      <div class="btn" onclick="speakText('学習を始めましょう')">音声ガイド</div>
     </div>
     `;
   }
@@ -133,7 +171,9 @@ function changeTab(tab){
     html = `
     <div class="card">
       <h3>AI相談</h3>
-      <p>ここも次で強化する</p>
+      <input id="aiInput" placeholder="悩みを書く">
+      <div class="btn" onclick="aiTalk()">送信</div>
+      <p id="aiReply"></p>
     </div>
     `;
   }
@@ -159,6 +199,14 @@ function changeTab(tab){
     </div>
 
     <div class="card">
+      <h3>音声</h3>
+      <select onchange="setVoice(this.value)">
+        <option value="on">ON</option>
+        <option value="off">OFF</option>
+      </select>
+    </div>
+
+    <div class="card">
       <h3>試験日</h3>
       <input type="date" onchange="setExam(this.value)">
     </div>
@@ -167,11 +215,20 @@ function changeTab(tab){
 
   document.getElementById("screen").innerHTML = html;
 
-  document.querySelectorAll(".nav div").forEach(el=>el.classList.remove("active"));
-  event.target.classList.add("active");
+  document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
+  el.classList.add("active");
 }
 
-// 🔥 テーマ
+// AI簡易
+function aiTalk(){
+  const text = document.getElementById("aiInput").value;
+  const reply = "大丈夫よ、少しずつ進めばいいの。";
+
+  document.getElementById("aiReply").innerText = reply;
+  speakText(reply);
+}
+
+// 設定
 function setTheme(t){
   settings.theme = t;
   save();
@@ -182,47 +239,41 @@ function applyTheme(){
   document.body.className = settings.theme;
 }
 
-// 🔥 性格
 function setPersonality(p){
   settings.personality = p;
   save();
 }
 
-// 🔥 試験日
-function setExam(date){
-  settings.examDate = date;
+function setVoice(v){
+  settings.voice = (v === "on");
   save();
 }
 
-// 🔥 メッセージ
-function getMessage(){
-  if(settings.personality === "strict"){
-    return "甘えはダメよ。やるべきことをやりなさい。";
-  }
-  if(settings.personality === "friend"){
-    return "いい感じじゃん！その調子でいこう🔥";
-  }
-  return "無理しなくていいのよ。でも一歩は進みましょうね。";
+function setExam(d){
+  settings.examDate = d;
+  save();
 }
 
-// 🔥 カウントダウン
+// メッセージ
+function getMessage(){
+  if(settings.personality==="strict") return "甘えはダメよ。やりなさい。";
+  if(settings.personality==="friend") return "いい感じじゃん！🔥";
+  return "無理しなくていいのよ。でも一歩ね。";
+}
+
+// カウント
 function getCountdown(){
   if(!settings.examDate) return "未設定";
-
-  const today = new Date();
-  const exam = new Date(settings.examDate);
-  const diff = Math.ceil((exam - today)/(1000*60*60*24));
-
-  return "あと " + diff + " 日";
+  const d = Math.ceil((new Date(settings.examDate)-new Date())/(1000*60*60*24));
+  return "あと "+d+" 日";
 }
 
-// 保存
 function save(){
   localStorage.setItem("settings", JSON.stringify(settings));
 }
 
-// 初期表示
-changeTab("home");
+// 初期
+changeTab("home", document.querySelector(".nav div"));
 </script>
 
 </body>
