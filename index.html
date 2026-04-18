@@ -16,7 +16,6 @@ body{
   align-items:center;
   height:100vh;
 }
-
 .box{
   background:#222;
   padding:20px;
@@ -25,7 +24,6 @@ body{
   width:90%;
   max-width:400px;
 }
-
 button{
   padding:12px;
   margin:5px;
@@ -33,15 +31,12 @@ button{
   border-radius:10px;
   background:#4caf50;
   color:#fff;
-  font-size:16px;
 }
-
 select{
   padding:10px;
   border-radius:10px;
   margin:10px;
 }
-
 textarea{
   width:100%;
   height:80px;
@@ -74,7 +69,6 @@ textarea{
 <script>
 let unlocked = false;
 
-// 🔓 最初のタップで音声解放（超重要）
 function unlockAudio(){
   const a = new Audio();
   a.src = "";
@@ -83,7 +77,6 @@ function unlockAudio(){
   alert("音声解放OK");
 }
 
-// 🔊 再生
 async function speak(){
   if(!unlocked){
     alert("先に①初回タップして");
@@ -99,10 +92,22 @@ async function speak(){
     uttr.rate = 1;
     speechSynthesis.speak(uttr);
   }else{
-    // ⚠️ GitHubでは直接APIキー使えない
-    // 仮：音声ダミー or 後でVercelに切り替え
+    try{
+      const res = await fetch("/api/speak", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ text })
+      });
 
-    alert("ElevenLabsはVercel接続後に有効化");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const audio = new Audio(url);
+      audio.play();
+
+    }catch(e){
+      alert("音声エラー");
+    }
   }
 }
 </script>
