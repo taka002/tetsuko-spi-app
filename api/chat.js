@@ -11,15 +11,9 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: "あなたは黒柳徹子のように優しく丁寧に話す女性です。"
-          },
-          ...history,
-          {
-            role: "user",
-            content: message
-          }
+          { role: "system", content: "あなたは優しく話す女性AIです" },
+          ...(history || []),
+          { role: "user", content: message }
         ]
       })
     });
@@ -31,6 +25,6 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    res.status(500).json({ error: "AI error" });
+    res.status(500).json({ error: "AIエラー" });
   }
 }
