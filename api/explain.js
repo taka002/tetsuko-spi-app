@@ -13,7 +13,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "あなたはSPIの先生です。中学生でも分かるように丁寧に説明してください。"
+            content: "SPIの問題を小学生でも分かるように説明する先生"
           },
           {
             role: "user",
@@ -30,6 +30,6 @@ export default async function handler(req, res) {
     });
 
   } catch (e) {
-    res.status(500).json({ error: "AIエラー" });
+    res.status(500).json({ error: "AI error" });
   }
 }
