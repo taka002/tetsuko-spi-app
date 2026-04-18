@@ -54,6 +54,7 @@ textarea{
   <button onclick="speak()">再生</button>
 </div>
 
+<!-- 🔥 ここにまとめる -->
 <script>
 let unlocked = false;
 
@@ -71,16 +72,20 @@ function speak(){
     return;
   }
 
-  const text = document.getElementById("text").value;
+  const userText = document.getElementById("text").value;
 
-  const uttr = new SpeechSynthesisUtterance(text);
+  // 仮AI返信
+  const reply = "それは面白いですね。もう少し詳しく教えてください。";
 
-  // 🔥 ここが調整ポイント
+  const uttr = new SpeechSynthesisUtterance(reply);
   uttr.lang = "ja-JP";
   uttr.pitch = 1.2;
   uttr.rate = 1;
 
   speechSynthesis.speak(uttr);
+
+  // 表示更新
+  document.getElementById("text").value = reply;
 }
 </script>
 
