@@ -170,6 +170,8 @@ function changeTab(tab, el){
       <p id="result"></p>
       <p id="explain"></p>
 
+      <div class="btn" onclick="aiExplain()">🤖 AIで解説</div>
+
       <div class="btn" onclick="nextQuestion()">次の問題</div>
     </div>
     `;
@@ -251,6 +253,31 @@ function answer(i){
   localStorage.setItem("stats",JSON.stringify(stats));
 }
 
+// ===== AI解説 =====
+async function aiExplain(){
+  const q = questions[current];
+
+  document.getElementById("explain").innerText = "AIが解説中...";
+
+  try{
+    const res = await fetch("/api/explain", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        question: q.q + " 正解: " + q.choices[q.correct]
+      })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("explain").innerText = data.reply;
+    speakText(data.reply);
+
+  }catch(e){
+    document.getElementById("explain").innerText = "AIエラー";
+  }
+}
+
 // ===== 次 =====
 function nextQuestion(){
   current++;
@@ -258,7 +285,7 @@ function nextQuestion(){
   changeTab("study", document.querySelectorAll(".nav div")[1]);
 }
 
-// ===== AI =====
+// ===== AI相談 =====
 function aiTalk(){
   const text = document.getElementById("aiInput").value;
   const reply = "大丈夫よ、少しずつ進めばいいの。";
