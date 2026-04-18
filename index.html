@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>徹子AI App</title>
+<title>徹子AI</title>
 
 <style>
 body{
@@ -13,82 +13,56 @@ body{
   font-family:sans-serif;
 }
 
-/* ヘッダー */
+/* 上部ヘッダー */
 .header{
-  position:fixed;
-  top:0;
-  width:100%;
   padding:15px;
-  background:#1c1c1c;
   text-align:center;
-  font-weight:bold;
-  z-index:10;
+  font-size:20px;
+  background:#1c1c1c;
 }
 
 /* メイン */
 .main{
-  padding-top:60px;
+  padding:15px;
   padding-bottom:80px;
 }
 
 /* カード */
 .card{
-  background:#fff;
-  color:#000;
-  margin:15px;
+  background:#222;
   border-radius:20px;
-  overflow:hidden;
-  box-shadow:0 5px 15px rgba(0,0,0,0.3);
-  transition:0.3s;
-}
-.card:active{
-  transform:scale(0.97);
-}
-.card img{
-  width:100%;
-}
-.content{
-  padding:15px;
+  padding:20px;
+  margin-bottom:15px;
 }
 
 /* ボタン */
 .btn{
-  margin:10px;
-  padding:15px;
-  background:#00c853;
+  background:#4caf50;
+  padding:12px;
   border-radius:12px;
   text-align:center;
-  color:#fff;
+  margin-top:10px;
 }
 
-/* AI */
-.ai{
-  display:none;
-  padding:15px;
-}
-textarea{
-  width:100%;
-  height:80px;
-  border-radius:10px;
-  padding:10px;
-}
-
-/* タブバー */
-.tabbar{
+/* 下タブ */
+.nav{
   position:fixed;
   bottom:0;
   width:100%;
-  display:flex;
   background:#1c1c1c;
+  display:flex;
+  justify-content:space-around;
+  padding:10px 0;
 }
-.tab{
-  flex:1;
-  padding:15px;
+
+.nav div{
   text-align:center;
+  font-size:12px;
   color:#aaa;
 }
+
 .active{
-  color:#00c853;
+  color:#4caf50;
 }
 </style>
 </head>
@@ -97,69 +71,92 @@ textarea{
 
 <div class="header">📱 徹子AI</div>
 
-<div class="main" id="home">
+<div class="main" id="screen">
 
-  <!-- カード① -->
+  <!-- ホーム -->
   <div class="card">
-    <img src="https://via.placeholder.com/400x200">
-    <div class="content">
-      <h3>SPI対策アプリ</h3>
-      <p>スキマ時間で効率よく学べる人気アプリ</p>
-    </div>
+    <h3>今日の一言</h3>
+    <p>無理しなくていいのよ。でも一歩は進みましょうね。</p>
   </div>
 
-  <!-- カード② -->
   <div class="card">
-    <img src="https://via.placeholder.com/400x200">
-    <div class="content">
-      <h3>英語学習アプリ</h3>
-      <p>初心者でも続く神アプリ</p>
-    </div>
+    <h3>勉強時間</h3>
+    <p>0分</p>
+  </div>
+
+  <div class="card">
+    <h3>試験まで</h3>
+    <p>あと30日</p>
   </div>
 
 </div>
 
-<!-- AI画面 -->
-<div class="ai" id="ai">
-  <h3>🤖 AI相談</h3>
-  <textarea id="text">おすすめ教えて</textarea>
-  <br><br>
-  <button onclick="speak()">AIで回答</button>
-</div>
-
-<!-- タブ -->
-<div class="tabbar">
-  <div class="tab active" onclick="showTab('home', this)">🏠</div>
-  <div class="tab" onclick="showTab('ai', this)">🤖</div>
+<!-- 下タブ -->
+<div class="nav">
+  <div onclick="changeTab('home')" class="active">🏠<br>ホーム</div>
+  <div onclick="changeTab('study')">📚<br>学習</div>
+  <div onclick="changeTab('ai')">🤖<br>AI</div>
+  <div onclick="changeTab('calendar')">📅<br>記録</div>
 </div>
 
 <script>
-let unlocked = false;
+function changeTab(tab){
 
-// タブ切替
-function showTab(id, el){
-  document.getElementById("home").style.display = "none";
-  document.getElementById("ai").style.display = "none";
+  let html = "";
 
-  document.getElementById(id).style.display = "block";
+  if(tab === "home"){
+    html = `
+    <div class="card">
+      <h3>今日の一言</h3>
+      <p>無理しなくていいのよ。でも一歩は進みましょうね。</p>
+    </div>
 
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  el.classList.add("active");
-}
+    <div class="card">
+      <h3>勉強時間</h3>
+      <p>0分</p>
+    </div>
 
-// AI音声
-function speak(){
-  const text = document.getElementById("text").value;
+    <div class="card">
+      <h3>試験まで</h3>
+      <p>あと30日</p>
+    </div>
+    `;
+  }
 
-  const reply = "あなたにはこのアプリが合っていますよ。";
+  if(tab === "study"){
+    html = `
+    <div class="card">
+      <h3>SPI問題</h3>
+      <p>ここに問題表示</p>
+      <div class="btn">回答する</div>
+    </div>
+    `;
+  }
 
-  document.getElementById("text").value = reply;
+  if(tab === "ai"){
+    html = `
+    <div class="card">
+      <h3>AI相談</h3>
+      <p>悩みを書いてください</p>
+      <div class="btn">送信</div>
+    </div>
+    `;
+  }
 
-  const uttr = new SpeechSynthesisUtterance(reply);
-  uttr.lang = "ja-JP";
-  uttr.pitch = 1.2;
+  if(tab === "calendar"){
+    html = `
+    <div class="card">
+      <h3>学習記録</h3>
+      <p>カレンダーここに</p>
+    </div>
+    `;
+  }
 
-  speechSynthesis.speak(uttr);
+  document.getElementById("screen").innerHTML = html;
+
+  // アクティブ色変更
+  document.querySelectorAll(".nav div").forEach(el => el.classList.remove("active"));
+  event.target.classList.add("active");
 }
 </script>
 
