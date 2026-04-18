@@ -8,16 +8,19 @@
 <style>
 body{
   margin:0;
+  font-family:sans-serif;
   background:#111;
   color:#fff;
-  font-family:sans-serif;
 }
 
-/* 上部ヘッダー */
+/* テーマ */
+body.light{ background:#f5f5f5; color:#111; }
+body.blue{ background:#0d1b2a; color:#fff; }
+
+/* ヘッダー */
 .header{
   padding:15px;
   text-align:center;
-  font-size:20px;
   background:#1c1c1c;
 }
 
@@ -34,14 +37,16 @@ body{
   padding:20px;
   margin-bottom:15px;
 }
+body.light .card{ background:#fff; }
+body.blue .card{ background:#1b263b; }
 
 /* ボタン */
 .btn{
   background:#4caf50;
   padding:12px;
   border-radius:12px;
-  text-align:center;
   margin-top:10px;
+  text-align:center;
 }
 
 /* 下タブ */
@@ -56,13 +61,19 @@ body{
 }
 
 .nav div{
-  text-align:center;
-  font-size:12px;
   color:#aaa;
+  font-size:12px;
 }
 
 .active{
   color:#4caf50;
+}
+
+input, select{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
 }
 </style>
 </head>
@@ -71,54 +82,40 @@ body{
 
 <div class="header">📱 徹子AI</div>
 
-<div class="main" id="screen">
+<div class="main" id="screen"></div>
 
-  <!-- ホーム -->
-  <div class="card">
-    <h3>今日の一言</h3>
-    <p>無理しなくていいのよ。でも一歩は進みましょうね。</p>
-  </div>
-
-  <div class="card">
-    <h3>勉強時間</h3>
-    <p>0分</p>
-  </div>
-
-  <div class="card">
-    <h3>試験まで</h3>
-    <p>あと30日</p>
-  </div>
-
-</div>
-
-<!-- 下タブ -->
 <div class="nav">
   <div onclick="changeTab('home')" class="active">🏠<br>ホーム</div>
   <div onclick="changeTab('study')">📚<br>学習</div>
   <div onclick="changeTab('ai')">🤖<br>AI</div>
-  <div onclick="changeTab('calendar')">📅<br>記録</div>
+  <div onclick="changeTab('setting')">⚙️<br>設定</div>
 </div>
 
 <script>
-function changeTab(tab){
+// 🔥 保存データ
+let settings = JSON.parse(localStorage.getItem("settings")) || {
+  theme:"dark",
+  personality:"normal",
+  examDate:""
+};
 
+// 🔥 初期反映
+applyTheme();
+
+// 画面切り替え
+function changeTab(tab){
   let html = "";
 
   if(tab === "home"){
     html = `
     <div class="card">
       <h3>今日の一言</h3>
-      <p>無理しなくていいのよ。でも一歩は進みましょうね。</p>
-    </div>
-
-    <div class="card">
-      <h3>勉強時間</h3>
-      <p>0分</p>
+      <p>${getMessage()}</p>
     </div>
 
     <div class="card">
       <h3>試験まで</h3>
-      <p>あと30日</p>
+      <p>${getCountdown()}</p>
     </div>
     `;
   }
@@ -126,9 +123,8 @@ function changeTab(tab){
   if(tab === "study"){
     html = `
     <div class="card">
-      <h3>SPI問題</h3>
-      <p>ここに問題表示</p>
-      <div class="btn">回答する</div>
+      <h3>学習</h3>
+      <p>ここに問題表示（次で作る）</p>
     </div>
     `;
   }
@@ -137,27 +133,96 @@ function changeTab(tab){
     html = `
     <div class="card">
       <h3>AI相談</h3>
-      <p>悩みを書いてください</p>
-      <div class="btn">送信</div>
+      <p>ここも次で強化する</p>
     </div>
     `;
   }
 
-  if(tab === "calendar"){
+  if(tab === "setting"){
     html = `
     <div class="card">
-      <h3>学習記録</h3>
-      <p>カレンダーここに</p>
+      <h3>テーマ</h3>
+      <select onchange="setTheme(this.value)">
+        <option value="dark">ダーク</option>
+        <option value="blue">ブルー</option>
+        <option value="light">ライト</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h3>徹子の性格</h3>
+      <select onchange="setPersonality(this.value)">
+        <option value="normal">優しい</option>
+        <option value="strict">厳しい</option>
+        <option value="friend">フレンドリー</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h3>試験日</h3>
+      <input type="date" onchange="setExam(this.value)">
     </div>
     `;
   }
 
   document.getElementById("screen").innerHTML = html;
 
-  // アクティブ色変更
-  document.querySelectorAll(".nav div").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".nav div").forEach(el=>el.classList.remove("active"));
   event.target.classList.add("active");
 }
+
+// 🔥 テーマ
+function setTheme(t){
+  settings.theme = t;
+  save();
+  applyTheme();
+}
+
+function applyTheme(){
+  document.body.className = settings.theme;
+}
+
+// 🔥 性格
+function setPersonality(p){
+  settings.personality = p;
+  save();
+}
+
+// 🔥 試験日
+function setExam(date){
+  settings.examDate = date;
+  save();
+}
+
+// 🔥 メッセージ
+function getMessage(){
+  if(settings.personality === "strict"){
+    return "甘えはダメよ。やるべきことをやりなさい。";
+  }
+  if(settings.personality === "friend"){
+    return "いい感じじゃん！その調子でいこう🔥";
+  }
+  return "無理しなくていいのよ。でも一歩は進みましょうね。";
+}
+
+// 🔥 カウントダウン
+function getCountdown(){
+  if(!settings.examDate) return "未設定";
+
+  const today = new Date();
+  const exam = new Date(settings.examDate);
+  const diff = Math.ceil((exam - today)/(1000*60*60*24));
+
+  return "あと " + diff + " 日";
+}
+
+// 保存
+function save(){
+  localStorage.setItem("settings", JSON.stringify(settings));
+}
+
+// 初期表示
+changeTab("home");
 </script>
 
 </body>
