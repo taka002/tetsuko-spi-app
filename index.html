@@ -32,11 +32,6 @@ button{
   background:#4caf50;
   color:#fff;
 }
-select{
-  padding:10px;
-  border-radius:10px;
-  margin:10px;
-}
 textarea{
   width:100%;
   height:80px;
@@ -49,16 +44,9 @@ textarea{
 <body>
 
 <div class="box">
-  <h2>🎤 徹子AI 音声</h2>
+  <h2>🎤 徹子AI（軽量版）</h2>
 
   <textarea id="text">こんにちは、徹子です。</textarea>
-
-  <br>
-
-  <select id="mode">
-    <option value="eleven">ElevenLabs</option>
-    <option value="browser">ブラウザ音声</option>
-  </select>
 
   <br>
 
@@ -74,51 +62,25 @@ function unlockAudio(){
   a.src = "";
   a.play().catch(()=>{});
   unlocked = true;
-  alert("音声解放OK");
+  alert("音声OK");
 }
 
-async function speak(){
+function speak(){
   if(!unlocked){
-    alert("先に①初回タップして");
+    alert("先に①押して");
     return;
   }
 
   const text = document.getElementById("text").value;
-  const mode = document.getElementById("mode").value;
 
-  if(!text){
-    alert("テキストが空です");
-    return;
-  }
+  const uttr = new SpeechSynthesisUtterance(text);
 
-  if(mode === "browser"){
-    const uttr = new SpeechSynthesisUtterance(text);
-    uttr.pitch = 1.2;
-    uttr.rate = 1;
-    speechSynthesis.speak(uttr);
-  } else {
-    try{
-      const res = await fetch("/api/speak", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ text })
-      });
+  // 🔥 ここが調整ポイント
+  uttr.lang = "ja-JP";
+  uttr.pitch = 1.2;
+  uttr.rate = 1;
 
-      if(!res.ok){
-        throw new Error("APIエラー");
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      const audio = new Audio(url);
-      audio.play();
-
-    }catch(e){
-      console.error(e);
-      alert("音声エラー（APIまたはIDを確認）");
-    }
-  }
+  speechSynthesis.speak(uttr);
 }
 </script>
 
