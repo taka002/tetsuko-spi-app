@@ -70,13 +70,17 @@ input, select{
   border-radius:10px;
   margin-top:10px;
 }
+
+#explain{
+  margin-top:10px;
+  line-height:1.6;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header">📱 徹子AI</div>
-
 <div class="main" id="screen"></div>
 
 <div class="nav">
@@ -102,56 +106,37 @@ function speakText(text){
   const uttr = new SpeechSynthesisUtterance(text);
   uttr.lang = "ja-JP";
 
-  if(settings.personality === "strict"){
-    uttr.pitch = 0.8;
-  }else if(settings.personality === "friend"){
-    uttr.pitch = 1.4;
-  }else{
-    uttr.pitch = 1.2;
-  }
+  uttr.pitch =
+    settings.personality==="strict" ? 0.8 :
+    settings.personality==="friend" ? 1.4 : 1.2;
 
   speechSynthesis.speak(uttr);
 }
 
-// ===== 問題データ =====
+// ===== 問題 =====
 let questions = [
-  {
-    q:"3 + 5 = ?",
-    choices:["6","7","8","9"],
-    correct:2,
-    explanation:"3+5=8です"
-  },
-  {
-    q:"10 ÷ 2 = ?",
-    choices:["2","3","5","8"],
-    correct:2,
-    explanation:"10÷2=5です"
-  }
+  { q:"3 + 5 = ?", choices:["6","7","8","9"], correct:2, explanation:"3+5=8です" },
+  { q:"10 ÷ 2 = ?", choices:["2","3","5","8"], correct:2, explanation:"10÷2=5です" }
 ];
 
 let current = 0;
 let stats = JSON.parse(localStorage.getItem("stats")) || {};
 
-// ===== 画面切替 =====
+// ===== 画面 =====
 function changeTab(tab, el){
-
   let html = "";
 
   if(tab==="home"){
     const msg = getMessage();
-
     html = `
     <div class="card">
       <h3>今日の一言</h3>
       <p>${msg}</p>
     </div>
-
     <div class="card">
       <h3>試験まで</h3>
       <p>${getCountdown()}</p>
-    </div>
-    `;
-
+    </div>`;
     speakText(msg);
   }
 
@@ -168,24 +153,26 @@ function changeTab(tab, el){
       ).join("")}
 
       <p id="result"></p>
-      <p id="explain"></p>
+      <div id="explain"></div>
 
       <div class="btn" onclick="aiExplain()">🤖 AIで解説</div>
 
+      <!-- 🔥 深掘り -->
+      <input id="deepInput" placeholder="どこが分からない？">
+      <div class="btn" onclick="deepExplain()">🔍 深掘り質問</div>
+
       <div class="btn" onclick="nextQuestion()">次の問題</div>
-    </div>
-    `;
+    </div>`;
   }
 
   if(tab==="ai"){
     html = `
     <div class="card">
       <h3>AI相談</h3>
-      <input id="aiInput" placeholder="悩みを書く">
+      <input id="aiInput">
       <div class="btn" onclick="aiTalk()">送信</div>
       <p id="aiReply"></p>
-    </div>
-    `;
+    </div>`;
   }
 
   if(tab==="setting"){
@@ -197,34 +184,10 @@ function changeTab(tab, el){
         <option value="blue">ブルー</option>
         <option value="light">ライト</option>
       </select>
-    </div>
-
-    <div class="card">
-      <h3>性格</h3>
-      <select onchange="setPersonality(this.value)">
-        <option value="normal">優しい</option>
-        <option value="strict">厳しい</option>
-        <option value="friend">フレンドリー</option>
-      </select>
-    </div>
-
-    <div class="card">
-      <h3>音声</h3>
-      <select onchange="setVoice(this.value)">
-        <option value="on">ON</option>
-        <option value="off">OFF</option>
-      </select>
-    </div>
-
-    <div class="card">
-      <h3>試験日</h3>
-      <input type="date" onchange="setExam(this.value)">
-    </div>
-    `;
+    </div>`;
   }
 
   document.getElementById("screen").innerHTML = html;
-
   document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
   el.classList.add("active");
 }
@@ -233,10 +196,7 @@ function changeTab(tab, el){
 function answer(i){
   const q = questions[current];
 
-  if(!stats[current]){
-    stats[current]={wrong:0,count:0};
-  }
-
+  if(!stats[current]) stats[current]={wrong:0,count:0};
   stats[current].count++;
 
   if(i===q.correct){
@@ -248,79 +208,65 @@ function answer(i){
     stats[current].wrong++;
   }
 
-  document.getElementById("explain").innerText=q.explanation;
-
-  localStorage.setItem("stats",JSON.stringify(stats));
+  document.getElementById("explain").innerHTML=q.explanation;
 }
 
 // ===== AI解説 =====
 async function aiExplain(){
   const q = questions[current];
+  document.getElementById("explain").innerText="AI解説中...";
 
-  document.getElementById("explain").innerText = "AIが解説中...";
+  const res = await fetch("/api/explain",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      question: q.q + " 正解: " + q.choices[q.correct]
+    })
+  });
 
-  try{
-    const res = await fetch("/api/explain", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        question: q.q + " 正解: " + q.choices[q.correct]
-      })
-    });
+  const data = await res.json();
 
-    const data = await res.json();
+  document.getElementById("explain").innerHTML=data.reply;
+  speakText(data.reply);
+}
 
-    document.getElementById("explain").innerText = data.reply;
-    speakText(data.reply);
+// ===== 深掘り =====
+async function deepExplain(){
+  const q = questions[current];
+  const userQ = document.getElementById("deepInput").value;
 
-  }catch(e){
-    document.getElementById("explain").innerText = "AIエラー";
-  }
+  document.getElementById("explain").innerText="深掘り中...";
+
+  const res = await fetch("/api/explain",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      question: `
+問題:${q.q}
+正解:${q.choices[q.correct]}
+質問:${userQ}
+図や表を使って説明して
+`
+    })
+  });
+
+  const data = await res.json();
+
+  document.getElementById("explain").innerHTML=data.reply;
+  speakText(data.reply);
 }
 
 // ===== 次 =====
 function nextQuestion(){
-  current++;
-  if(current>=questions.length) current=0;
+  current = (current+1)%questions.length;
   changeTab("study", document.querySelectorAll(".nav div")[1]);
 }
 
-// ===== AI相談 =====
-function aiTalk(){
-  const text = document.getElementById("aiInput").value;
-  const reply = "大丈夫よ、少しずつ進めばいいの。";
-
-  document.getElementById("aiReply").innerText = reply;
-  speakText(reply);
-}
-
-// ===== 設定 =====
-function setTheme(t){ settings.theme=t; save(); applyTheme(); }
-function setPersonality(p){ settings.personality=p; save(); }
-function setVoice(v){ settings.voice=(v==="on"); save(); }
-function setExam(d){ settings.examDate=d; save(); }
-
-function applyTheme(){ document.body.className=settings.theme; }
-
-function save(){
-  localStorage.setItem("settings", JSON.stringify(settings));
-}
-
 // ===== 補助 =====
-function getMessage(){
-  if(settings.personality==="strict") return "甘えはダメよ";
-  if(settings.personality==="friend") return "いい感じ🔥";
-  return "無理しなくていいのよ";
-}
-
-function getCountdown(){
-  if(!settings.examDate) return "未設定";
-  const d=Math.ceil((new Date(settings.examDate)-new Date())/(1000*60*60*24));
-  return "あと "+d+" 日";
-}
+function getMessage(){ return "今日も一歩進みましょう"; }
+function getCountdown(){ return "あと 未設定 日"; }
 
 // 初期
-applyTheme();
 changeTab("home", document.querySelector(".nav div"));
 </script>
 
