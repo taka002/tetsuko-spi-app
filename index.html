@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>徹子AI 音声版</title>
+<title>徹子AI App</title>
 
 <style>
 body{
@@ -11,26 +11,60 @@ body{
   background:#111;
   color:#fff;
   font-family:sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
 }
-.box{
-  background:#222;
-  padding:20px;
-  border-radius:15px;
+
+/* ヘッダー */
+.header{
+  position:fixed;
+  top:0;
+  width:100%;
+  padding:15px;
+  background:#1c1c1c;
   text-align:center;
-  width:90%;
-  max-width:400px;
+  font-weight:bold;
+  z-index:10;
 }
-button{
-  padding:12px;
-  margin:5px;
-  border:none;
-  border-radius:10px;
-  background:#4caf50;
+
+/* メイン */
+.main{
+  padding-top:60px;
+  padding-bottom:80px;
+}
+
+/* カード */
+.card{
+  background:#fff;
+  color:#000;
+  margin:15px;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 5px 15px rgba(0,0,0,0.3);
+  transition:0.3s;
+}
+.card:active{
+  transform:scale(0.97);
+}
+.card img{
+  width:100%;
+}
+.content{
+  padding:15px;
+}
+
+/* ボタン */
+.btn{
+  margin:10px;
+  padding:15px;
+  background:#00c853;
+  border-radius:12px;
+  text-align:center;
   color:#fff;
+}
+
+/* AI */
+.ai{
+  display:none;
+  padding:15px;
 }
 textarea{
   width:100%;
@@ -38,77 +72,94 @@ textarea{
   border-radius:10px;
   padding:10px;
 }
+
+/* タブバー */
+.tabbar{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  display:flex;
+  background:#1c1c1c;
+}
+.tab{
+  flex:1;
+  padding:15px;
+  text-align:center;
+  color:#aaa;
+}
+.active{
+  color:#00c853;
+}
 </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h2>🎤 徹子AI（本物版）</h2>
+<div class="header">📱 徹子AI</div>
 
-  <textarea id="text">こんにちは、徹子です。</textarea>
+<div class="main" id="home">
 
-  <br>
+  <!-- カード① -->
+  <div class="card">
+    <img src="https://via.placeholder.com/400x200">
+    <div class="content">
+      <h3>SPI対策アプリ</h3>
+      <p>スキマ時間で効率よく学べる人気アプリ</p>
+    </div>
+  </div>
 
-  <button onclick="unlockAudio()">① 初回タップ</button>
-  <button onclick="speak()">再生</button>
+  <!-- カード② -->
+  <div class="card">
+    <img src="https://via.placeholder.com/400x200">
+    <div class="content">
+      <h3>英語学習アプリ</h3>
+      <p>初心者でも続く神アプリ</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- AI画面 -->
+<div class="ai" id="ai">
+  <h3>🤖 AI相談</h3>
+  <textarea id="text">おすすめ教えて</textarea>
+  <br><br>
+  <button onclick="speak()">AIで回答</button>
+</div>
+
+<!-- タブ -->
+<div class="tabbar">
+  <div class="tab active" onclick="showTab('home', this)">🏠</div>
+  <div class="tab" onclick="showTab('ai', this)">🤖</div>
 </div>
 
 <script>
 let unlocked = false;
-let history = [];
 
-// 🔓 音声解放
-function unlockAudio(){
-  const a = new Audio();
-  a.src = "";
-  a.play().catch(()=>{});
-  unlocked = true;
-  alert("音声OK");
+// タブ切替
+function showTab(id, el){
+  document.getElementById("home").style.display = "none";
+  document.getElementById("ai").style.display = "none";
+
+  document.getElementById(id).style.display = "block";
+
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
 }
 
-// 🧠 AI＋音声
-async function speak(){
-  if(!unlocked){
-    alert("先に①押して");
-    return;
-  }
-
+// AI音声
+function speak(){
   const text = document.getElementById("text").value;
 
-  try{
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: text,
-        history: history
-      })
-    });
+  const reply = "あなたにはこのアプリが合っていますよ。";
 
-    const data = await res.json();
-    const reply = data.reply;
+  document.getElementById("text").value = reply;
 
-    // 履歴保存
-    history.push({ role: "user", content: text });
-    history.push({ role: "assistant", content: reply });
+  const uttr = new SpeechSynthesisUtterance(reply);
+  uttr.lang = "ja-JP";
+  uttr.pitch = 1.2;
 
-    // 表示更新
-    document.getElementById("text").value = reply;
-
-    // 音声再生
-    const uttr = new SpeechSynthesisUtterance(reply);
-    uttr.lang = "ja-JP";
-    uttr.pitch = 1.2;
-    uttr.rate = 1;
-
-    speechSynthesis.speak(uttr);
-
-  }catch(e){
-    alert("AIエラー（API未設定の可能性）");
-  }
+  speechSynthesis.speak(uttr);
 }
 </script>
 
