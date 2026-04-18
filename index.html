@@ -44,7 +44,7 @@ textarea{
 <body>
 
 <div class="box">
-  <h2>🎤 徹子AI（軽量版）</h2>
+  <h2>🎤 徹子AI（本物版）</h2>
 
   <textarea id="text">こんにちは、徹子です。</textarea>
 
@@ -54,10 +54,11 @@ textarea{
   <button onclick="speak()">再生</button>
 </div>
 
-<!-- 🔥 ここにまとめる -->
 <script>
 let unlocked = false;
+let history = [];
 
+// 🔓 音声解放
 function unlockAudio(){
   const a = new Audio();
   a.src = "";
@@ -66,26 +67,48 @@ function unlockAudio(){
   alert("音声OK");
 }
 
-function speak(){
+// 🧠 AI＋音声
+async function speak(){
   if(!unlocked){
     alert("先に①押して");
     return;
   }
 
-  const userText = document.getElementById("text").value;
+  const text = document.getElementById("text").value;
 
-  // 仮AI返信
-  const reply = "それは面白いですね。もう少し詳しく教えてください。";
+  try{
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: text,
+        history: history
+      })
+    });
 
-  const uttr = new SpeechSynthesisUtterance(reply);
-  uttr.lang = "ja-JP";
-  uttr.pitch = 1.2;
-  uttr.rate = 1;
+    const data = await res.json();
+    const reply = data.reply;
 
-  speechSynthesis.speak(uttr);
+    // 履歴保存
+    history.push({ role: "user", content: text });
+    history.push({ role: "assistant", content: reply });
 
-  // 表示更新
-  document.getElementById("text").value = reply;
+    // 表示更新
+    document.getElementById("text").value = reply;
+
+    // 音声再生
+    const uttr = new SpeechSynthesisUtterance(reply);
+    uttr.lang = "ja-JP";
+    uttr.pitch = 1.2;
+    uttr.rate = 1;
+
+    speechSynthesis.speak(uttr);
+
+  }catch(e){
+    alert("AIエラー（API未設定の可能性）");
+  }
 }
 </script>
 
