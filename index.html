@@ -37,6 +37,7 @@ body{
   border-radius:15px;
   margin-top:12px;
   text-align:center;
+  font-weight:bold;
 }
 
 .nav{
@@ -63,16 +64,16 @@ body{
 
 <script>
 
-// ★これ重要
+// ===== 重要（これ忘れると真っ白になる）
 const screen = document.getElementById("screen");
 
-// データ
+// ===== データ
 let user={xp:0,level:1};
 let combo=0;
 let currentMode="非言語";
 let currentQ=null;
 
-// XP
+// ===== XP
 function nextXP(){return user.level*50;}
 function addXP(v){
   user.xp+=v;
@@ -82,14 +83,19 @@ function addXP(v){
   }
 }
 
-// 問題生成
+// ===== 問題生成
 function makeQ(q,correct){
   let choices=[correct,correct+1,correct-1,correct+2]
     .sort(()=>Math.random()-0.5);
-  return {q,choices,correct:choices.indexOf(correct)};
+
+  return {
+    q,
+    choices,
+    correct:choices.indexOf(correct),
+    exp:`答えは ${correct}`
+  };
 }
 
-// ✅ STEP2：ランダム化
 function genMath(){
   const type=Math.floor(Math.random()*3);
 
@@ -102,9 +108,9 @@ function genMath(){
 
   // 割合
   if(type===1){
-    let base=[50,100,200][Math.floor(Math.random()*3)];
-    let per=[10,20,30][Math.floor(Math.random()*3)];
-    return makeQ(`${base}の${per}%は？`,base*per/100);
+    let a=200;
+    let b=20;
+    return makeQ(`${a}の${b}%は？`,a*b/100);
   }
 
   // 比
@@ -117,13 +123,14 @@ function getQ(){
   return genMath();
 }
 
-// 画面
+// ===== 画面
 function changeTab(tab){
 
   if(tab==="home"){
     screen.innerHTML=`
     <div class="card">
       <h2>SPIトレーニング</h2>
+      <p>モード：非言語</p>
       <div class="btn" onclick="changeTab('study')">▶ 学習開始</div>
     </div>`;
   }
@@ -135,26 +142,36 @@ function changeTab(tab){
     screen.innerHTML=`
     <div class="card">
       <h2>${q.q}</h2>
+
       ${q.choices.map((c,i)=>
         `<div class="btn" onclick="answer(${i})">${c}</div>`
       ).join("")}
+
       <p id="result"></p>
     </div>`;
   }
 }
 
-// 回答
+// ===== 回答（強化版）
 function answer(i){
   const result=document.getElementById("result");
 
   if(i===currentQ.correct){
-    result.innerText="⭕ 正解";
+    result.innerText="⭕ 正解\n";
   }else{
-    result.innerText="❌ 不正解";
+    result.innerText="❌ 不正解\n";
   }
+
+  // 解説
+  result.innerText += currentQ.exp;
+
+  // 次へ
+  result.innerHTML += `
+    <div class="btn" onclick="changeTab('study')">次の問題 ▶</div>
+  `;
 }
 
-// 初期表示
+// ===== 初期表示
 changeTab("home");
 
 </script>
