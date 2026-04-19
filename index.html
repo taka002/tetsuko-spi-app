@@ -8,286 +8,232 @@
 <style>
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  font-family:-apple-system,sans-serif;
   background:linear-gradient(135deg,#1e1e2f,#0f2027);
   color:#fff;
 }
 
-/* ===== スプラッシュ ===== */
+/* スプラッシュ */
 #splash{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  position:fixed;width:100%;height:100%;
+  background:linear-gradient(#0f2027,#203a43);
+  display:flex;justify-content:center;align-items:center;
   z-index:9999;
-  transition:0.6s;
 }
-
-.splash-inner{
-  text-align:center;
-}
-
 .glow{
-  width:140px;
-  height:140px;
-  border-radius:50%;
+  width:120px;height:120px;border-radius:50%;
   background:radial-gradient(circle,#00f2fe,transparent);
-  margin:0 auto 20px;
-  animation:pulse 2.5s infinite;
+  animation:pulse 2s infinite;
 }
-
 @keyframes pulse{
-  0%{ transform:scale(0.8); opacity:0.5; }
-  50%{ transform:scale(1.3); opacity:1; }
-  100%{ transform:scale(0.8); opacity:0.5; }
-}
-
-.loader{
-  width:50px;
-  height:50px;
-  border:5px solid rgba(255,255,255,0.2);
-  border-top:5px solid #00f2fe;
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-  margin:auto;
-}
-
-@keyframes spin{
-  to{ transform:rotate(360deg); }
-}
-
-/* ===== UI ===== */
-.header{
-  padding:18px;
-  text-align:center;
-  font-size:18px;
-  font-weight:600;
-  background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(10px);
-}
-
-.main{
-  padding:15px;
-  padding-bottom:90px;
+  0%{transform:scale(0.8);}
+  50%{transform:scale(1.2);}
+  100%{transform:scale(0.8);}
 }
 
 .card{
   background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(12px);
-  border-radius:25px;
-  padding:20px;
-  margin-bottom:15px;
-  box-shadow:
-    0 10px 25px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+  padding:20px;border-radius:20px;margin:10px;
 }
 
 .btn{
   background:linear-gradient(135deg,#4facfe,#00f2fe);
-  padding:14px;
-  border-radius:15px;
-  margin-top:12px;
-  text-align:center;
-  font-weight:600;
-  box-shadow:0 6px 15px rgba(0,0,0,0.3);
+  padding:12px;border-radius:10px;margin-top:10px;text-align:center;
 }
 
-input{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  margin-top:10px;
-  border:none;
-  background:rgba(255,255,255,0.1);
-  color:#fff;
+/* レベルアップ */
+#levelUp{
+  position:fixed;width:100%;height:100%;
+  background:rgba(0,0,0,0.7);
+  display:none;justify-content:center;align-items:center;
+  z-index:9999;
 }
 
-.nav{
+#stamp{
   position:fixed;
-  bottom:0;
-  width:100%;
-  background:rgba(0,0,0,0.6);
-  backdrop-filter:blur(10px);
-  display:flex;
-  justify-content:space-around;
-  padding:10px 0;
-}
-
-.nav div{
-  color:#aaa;
-  font-size:12px;
-}
-
-.active{
-  color:#00f2fe;
+  top:40%;left:50%;
+  transform:translate(-50%,-50%) scale(0.5);
+  font-size:80px;
+  opacity:0;
+  transition:0.3s;
 }
 </style>
 </head>
 
 <body>
 
-<!-- 🔥 スプラッシュ（タップで起動） -->
+<!-- スプラッシュ -->
 <div id="splash" onclick="startApp()">
-  <div class="splash-inner">
+  <div style="text-align:center">
     <div class="glow"></div>
     <h1>徹子AI</h1>
     <p>タップして開始</p>
-    <div class="loader"></div>
   </div>
 </div>
 
-<div class="header">📱 徹子AI</div>
-<div class="main" id="screen"></div>
-
-<div class="nav">
-  <div onclick="changeTab('home', this)" class="active">🏠<br>ホーム</div>
-  <div onclick="changeTab('study', this)">📚<br>学習</div>
+<!-- レベルアップ -->
+<div id="levelUp">
+  <div class="card">
+    <h2>🎉 LEVEL UP</h2>
+    <p id="levelText"></p>
+  </div>
 </div>
+
+<!-- スタンプ -->
+<div id="stamp"></div>
+
+<div id="screen"></div>
 
 <script>
 
-// ===== ① 起動制御 =====
-let started=false;
-
-function startApp(){
-  if(started) return;
-  started=true;
-
-  // 🔊 音声
-  speakText("こんにちは、徹子です。今日も一歩進みましょう");
-
-  // 📳 振動（対応端末のみ）
-  if(navigator.vibrate){
-    navigator.vibrate(100);
-  }
-
-  // フェードアウト
-  setTimeout(()=>{
-    const s=document.getElementById("splash");
-    s.style.opacity="0";
-    setTimeout(()=>{ s.style.display="none"; },600);
-  },2000);
+// ===== 音声 =====
+function speak(text){
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="ja-JP";
+  speechSynthesis.speak(u);
 }
 
-// ===== 音声 =====
-function speakText(text){
-  const uttr=new SpeechSynthesisUtterance(text);
-  uttr.lang="ja-JP";
-  uttr.pitch=1.2;
-  speechSynthesis.speak(uttr);
+// ===== 起動 =====
+function startApp(){
+  speak("こんにちは、徹子です");
+  splash.style.display="none";
+}
+
+// ===== RPG =====
+let user = JSON.parse(localStorage.getItem("user")) || {
+  xp:0,level:1
+};
+
+let combo = 0;
+
+function nextXP(){
+  return user.level * 50;
+}
+
+function addXP(v){
+  user.xp += v;
+
+  if(user.xp >= nextXP()){
+    user.xp = 0;
+    user.level++;
+    showLevelUp();
+  }
+
+  save();
+}
+
+// ===== バッジ =====
+function getBadge(){
+  if(user.level>=50) return "👑 神";
+  if(user.level>=10) return "🔥 中級者";
+  if(user.level>=5) return "💪 頑張り屋";
+  return "🌱 初心者";
+}
+
+// ===== レベルアップ =====
+function showLevelUp(){
+  levelText.innerText="Lv."+user.level;
+  levelUp.style.display="flex";
+  speak("レベルアップ");
+
+  setTimeout(()=>{
+    levelUp.style.display="none";
+  },1500);
+}
+
+// ===== スタンプ =====
+function showStamp(t){
+  stamp.innerText=t;
+  stamp.style.opacity=1;
+  stamp.style.transform="translate(-50%,-50%) scale(1.5)";
+
+  setTimeout(()=>{
+    stamp.style.opacity=0;
+    stamp.style.transform="translate(-50%,-50%) scale(0.5)";
+  },400);
+}
+
+// ===== デイリー =====
+function getDaily(){
+  const today=new Date().toDateString();
+
+  let d=JSON.parse(localStorage.getItem("daily"))||{
+    date:today,count:0
+  };
+
+  if(d.date!==today){
+    d={date:today,count:0};
+  }
+
+  localStorage.setItem("daily",JSON.stringify(d));
+  return d;
+}
+
+function addDaily(){
+  let d=getDaily();
+  d.count++;
+  localStorage.setItem("daily",JSON.stringify(d));
 }
 
 // ===== 問題 =====
-let questions=[
-  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2,explanation:"3+5=8です"}
-];
-
-let current=0;
+let q={q:"3+5=?",c:["6","7","8","9"],a:2};
 
 // ===== 画面 =====
-function changeTab(tab,el){
-  let html="";
+function render(){
 
-  if(tab==="home"){
-    html=`
-    <div class="card">
-      <h3>今日の一言</h3>
-      <p>今日も一歩進みましょう</p>
-    </div>`;
-  }
+  const percent=Math.floor((user.xp/nextXP())*100);
+  const daily=getDaily();
 
-  if(tab==="study"){
-    const q=questions[current];
+  screen.innerHTML=`
+  <div class="card">
+    <h3>Lv.${user.level} ${getBadge()}</h3>
+    <p>${user.xp}/${nextXP()} XP</p>
+    <div style="height:10px;background:#333;border-radius:10px;">
+      <div style="width:${percent}%;height:100%;background:#00f2fe;"></div>
+    </div>
+  </div>
 
-    html=`
-    <div class="card">
-      <h3>問題</h3>
-      <p>${q.q}</p>
+  <div class="card">
+    <h3>🔥 デイリーミッション</h3>
+    <p>${daily.count}/5 問</p>
+  </div>
 
-      ${q.choices.map((c,i)=>
-        `<div class="btn" onclick="answer(${i})">${c}</div>`
-      ).join("")}
-
-      <p id="result"></p>
-      <div id="explain"></div>
-
-      <div class="btn" onclick="aiExplain()">🤖 AI解説</div>
-
-      <input id="deepInput" placeholder="どこが分からない？">
-      <div class="btn" onclick="deepExplain()">🔍 深掘り</div>
-
-      <div class="btn" onclick="nextQuestion()">次</div>
-    </div>`;
-  }
-
-  document.getElementById("screen").innerHTML=html;
-  document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
-  el.classList.add("active");
+  <div class="card">
+    <p>${q.q}</p>
+    ${q.c.map((c,i)=>`<div class="btn" onclick="answer(${i})">${c}</div>`).join("")}
+    <p id="result"></p>
+  </div>
+  `;
 }
 
 // ===== 判定 =====
 function answer(i){
-  const q=questions[current];
 
-  if(i===q.correct){
-    result.innerText="⭕ 正解";
-    speakText("正解よ");
+  if(i===q.a){
+    result.innerText="⭕";
+    combo++;
+    addXP(10+combo);
+    showStamp("⭕");
+    speak("正解");
   }else{
-    result.innerText="❌ 不正解";
-    speakText("違うわね");
+    result.innerText="❌";
+    combo=0;
+    addXP(2);
+    showStamp("❌");
   }
 
-  explain.innerHTML=q.explanation;
+  addDaily();
+  render();
 }
 
-// ===== AI =====
-async function aiExplain(){
-  const q=questions[current];
-  explain.innerText="AI解説中...";
-
-  const res=await fetch("/api/explain",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({question:q.q})
-  });
-
-  const data=await res.json();
-  explain.innerHTML=data.reply;
-}
-
-// ===== 深掘り =====
-async function deepExplain(){
-  const q=questions[current];
-  const userQ=document.getElementById("deepInput").value;
-
-  explain.innerText="深掘り中...";
-
-  const res=await fetch("/api/explain",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      question:`問題:${q.q} 質問:${userQ}`
-    })
-  });
-
-  const data=await res.json();
-  explain.innerHTML=data.reply;
-}
-
-// ===== 次 =====
-function nextQuestion(){
-  changeTab("study",document.querySelectorAll(".nav div")[1]);
+// ===== 保存 =====
+function save(){
+  localStorage.setItem("user",JSON.stringify(user));
 }
 
 // 初期
-changeTab("home",document.querySelector(".nav div"));
+render();
 
 </script>
-
 </body>
 </html>
