@@ -9,11 +9,11 @@
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-  background:linear-gradient(135deg,#1e1e2f,#0f2027);
+  background:linear-gradient(135deg,#1f2a44,#0a3d62,#0f2027);
   color:#fff;
 }
 
-/* ===== スプラッシュ ===== */
+/* スプラッシュ */
 #splash{
   position:fixed;width:100%;height:100%;
   background:linear-gradient(#0f2027,#203a43);
@@ -31,11 +31,10 @@ body{
   100%{transform:scale(0.8);}
 }
 
-/* ===== UI ===== */
+/* UI */
 .header{
   padding:18px;text-align:center;
   background:rgba(255,255,255,0.05);
-  font-weight:600;
 }
 
 .main{padding:15px;padding-bottom:100px;}
@@ -45,7 +44,6 @@ body{
   border-radius:20px;
   padding:20px;
   margin-bottom:15px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.4);
 }
 
 .btn{
@@ -54,17 +52,12 @@ body{
   border-radius:15px;
   margin-top:12px;
   text-align:center;
-  font-size:16px;
-  font-weight:600;
 }
-
-.btn:active{transform:scale(0.96);}
 
 .progress{
   height:10px;
   background:#333;
   border-radius:10px;
-  margin-top:10px;
 }
 
 .bar{
@@ -73,38 +66,36 @@ body{
   border-radius:10px;
 }
 
-/* ===== 演出 ===== */
-#levelUp{
-  position:fixed;width:100%;height:100%;
-  background:rgba(0,0,0,0.8);
-  display:none;justify-content:center;align-items:center;
-  z-index:9999;
+/* カレンダー */
+.calendar{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:5px;
+  margin-top:10px;
 }
-
-#stamp{
-  position:fixed;
-  top:40%;left:50%;
-  transform:translate(-50%,-50%) scale(0.5);
-  font-size:90px;
-  opacity:0;
-  transition:0.3s;
+.day{
+  background:#222;
+  padding:10px;
+  text-align:center;
+  border-radius:8px;
+  font-size:12px;
 }
+.done{ background:#00f2fe; color:#000; }
+.today{ border:2px solid #fff; }
 
-/* ===== ナビ ===== */
+/* ナビ */
 .nav{
   position:fixed;bottom:0;width:100%;
   background:#111;
   display:flex;justify-content:space-around;
   padding:10px 0;
 }
-.nav div{color:#aaa;}
 .active{color:#00f2fe;}
 </style>
 </head>
 
 <body>
 
-<!-- スプラッシュ -->
 <div id="splash" onclick="startApp()">
   <div style="text-align:center">
     <div class="glow"></div>
@@ -112,17 +103,6 @@ body{
     <p>タップして開始</p>
   </div>
 </div>
-
-<!-- レベルアップ -->
-<div id="levelUp">
-  <div class="card">
-    <h2>🎉 LEVEL UP</h2>
-    <p id="levelText"></p>
-  </div>
-</div>
-
-<!-- スタンプ -->
-<div id="stamp"></div>
 
 <div class="header">📱 徹子AI</div>
 <div class="main" id="screen"></div>
@@ -145,8 +125,6 @@ function speak(text){
 function startApp(){
   speak("こんにちは、徹子です");
   splash.style.display="none";
-
-  // 🔥 ここ重要（空画面防止）
   render();
 }
 
@@ -159,41 +137,59 @@ function nextXP(){ return user.level * 50; }
 
 function addXP(v){
   user.xp += v;
-
   if(user.xp >= nextXP()){
     user.xp = 0;
     user.level++;
-    showLevelUp();
+    speak("レベルアップ");
   }
-
   save();
 }
 
-// ===== バッジ =====
-function getBadge(){
-  if(user.level>=50) return "👑 神";
-  if(user.level>=10) return "🔥 中級者";
-  if(user.level>=5) return "💪 頑張り屋";
-  return "🌱 初心者";
+// ===== ログイン記録 =====
+function getLoginData(){
+  return JSON.parse(localStorage.getItem("login")) || {};
 }
 
-// ===== レベルアップ =====
-function showLevelUp(){
-  levelText.innerText="Lv."+user.level;
-  levelUp.style.display="flex";
-  speak("レベルアップよ");
-  setTimeout(()=>levelUp.style.display="none",1500);
+function updateLogin(){
+  let login = getLoginData();
+  const today = new Date().toDateString();
+  login[today] = true;
+  localStorage.setItem("login", JSON.stringify(login));
 }
 
-// ===== スタンプ =====
-function showStamp(t){
-  stamp.innerText=t;
-  stamp.style.opacity=1;
-  stamp.style.transform="translate(-50%,-50%) scale(1.5)";
-  setTimeout(()=>{
-    stamp.style.opacity=0;
-    stamp.style.transform="translate(-50%,-50%) scale(0.5)";
-  },400);
+function getStreak(){
+  let login = getLoginData();
+  let count=0;
+  let d=new Date();
+
+  while(true){
+    const key=d.toDateString();
+    if(login[key]) count++;
+    else break;
+    d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+
+// ===== カレンダー =====
+function renderCalendar(){
+  let login = getLoginData();
+  let html="<div class='calendar'>";
+
+  for(let i=6;i>=0;i--){
+    let d=new Date();
+    d.setDate(d.getDate()-i);
+    const key=d.toDateString();
+
+    let cls="day";
+    if(login[key]) cls+=" done";
+    if(i===0) cls+=" today";
+
+    html+=`<div class="${cls}">${d.getDate()}</div>`;
+  }
+
+  html+="</div>";
+  return html;
 }
 
 // ===== デイリー =====
@@ -215,8 +211,7 @@ function addDaily(){
 
   if(d.count>=5 && !d.done){
     d.done=true;
-    showStamp("🎉");
-    speak("ミッション達成よ");
+    speak("ミッション達成");
     addXP(20);
   }
 
@@ -225,7 +220,7 @@ function addDaily(){
 
 // ===== 問題 =====
 let questions=[
-  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2,explanation:"3+5=8です"}
+  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2}
 ];
 
 let current=0;
@@ -240,25 +235,22 @@ function changeTab(tab,el){
     html=`
 
     <div class="card">
-      <h2>Lv.${user.level} ${getBadge()}</h2>
-      <p>あと ${nextXP()-user.xp} XP</p>
+      <h2>Lv.${user.level}</h2>
+      <p>${user.xp}/${nextXP()} XP</p>
       <div class="progress">
         <div class="bar" style="width:${percent}%"></div>
       </div>
     </div>
 
     <div class="card">
-      <h3>🔥 デイリー</h3>
-      <p>${daily.count}/5 問（あと ${5-daily.count}）</p>
-      <div class="progress">
-        <div class="bar" style="width:${daily.count*20}%"></div>
-      </div>
-      ${daily.done ? "<p>🎉 達成済み！</p>" : ""}
+      <h3>🔥 連続ログイン ${getStreak()}日</h3>
+      ${renderCalendar()}
     </div>
 
     <div class="card">
-      <h3>💬 徹子の一言</h3>
-      <p>今日も一歩進みましょう</p>
+      <h3>🎯 今日の達成</h3>
+      <p>${daily.count}/5 問</p>
+      ${daily.done ? "<p>🎉 完了！</p>" : ""}
     </div>
 
     <div class="btn" onclick="changeTab('study', document.querySelectorAll('.nav div')[1])">
@@ -271,16 +263,14 @@ function changeTab(tab,el){
     const q=questions[current];
 
     html=`
-    <div class="card" style="padding:30px;">
+    <div class="card">
       <h2>${q.q}</h2>
 
       ${q.choices.map((c,i)=>
         `<div class="btn" onclick="answer(${i})">${c}</div>`
       ).join("")}
 
-      <p id="result" style="font-size:22px;margin-top:10px;"></p>
-      <p>${q.explanation}</p>
-
+      <p id="result"></p>
       <p>🔥 コンボ ${combo}</p>
     </div>
     `;
@@ -298,17 +288,15 @@ function answer(i){
   if(i===q.correct){
     result.innerText="⭕ 正解";
     combo++;
-    addXP(10 + combo);
-    showStamp("⭕");
-    speak("正解");
+    addXP(10+combo);
   }else{
     result.innerText="❌";
     combo=0;
     addXP(2);
-    showStamp("❌");
   }
 
   addDaily();
+  updateLogin();
   render();
 }
 
@@ -317,10 +305,8 @@ function save(){
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== 初期描画（←削除しない） =====
-function render(){
-  changeTab("home",document.querySelector(".nav div"));
-}
+// 初期
+render();
 
 </script>
 </body>
