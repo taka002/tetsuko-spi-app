@@ -37,11 +37,11 @@ body{
   border-radius:15px;
   margin-top:12px;
   text-align:center;
-  font-weight:bold;
 }
 
 .btn.disabled{
-  opacity:0.4;
+  opacity:0.5;
+  pointer-events:none;
 }
 
 .nav{
@@ -64,32 +64,49 @@ body{
 <div class="nav">
   <div onclick="changeTab('home')">🏠</div>
   <div onclick="changeTab('study')">📚</div>
+  <div onclick="showWeak()">📊</div>
 </div>
 
 <script>
 
+// ===== 画面取得 =====
 const screen = document.getElementById("screen");
 
-// ===== データ
-let currentQ=null;
-let answered=false;
+// ===== データ =====
+let combo = 0;
+let currentQ = null;
+let answered = false;
 
-// ===== 苦手データ
-function recordWeak(type, ok){
-  let data=JSON.parse(localStorage.getItem("weak"))||{
+// ===== 苦手分析 =====
+function recordWeak(type,ok){
+  let d = JSON.parse(localStorage.getItem("weak")) || {
     calc:{ok:0,ng:0},
     percent:{ok:0,ng:0},
     ratio:{ok:0,ng:0}
   };
 
-  if(ok) data[type].ok++;
-  else data[type].ng++;
+  if(ok) d[type].ok++;
+  else d[type].ng++;
 
-  localStorage.setItem("weak",JSON.stringify(data));
+  localStorage.setItem("weak",JSON.stringify(d));
 }
 
-// ===== 問題生成
-function makeQ(q,correct,type){
+function showWeak(){
+  let d = JSON.parse(localStorage.getItem("weak")) || {};
+  let html = "<div class='card'><h2>苦手分析</h2>";
+
+  Object.keys(d).forEach(k=>{
+    let t = d[k].ok + d[k].ng;
+    let r = t ? Math.floor(d[k].ok/t*100) : 0;
+    html += `<p>${k} : ${r}%</p>`;
+  });
+
+  html += "</div>";
+  screen.innerHTML = html;
+}
+
+// ===== 問題生成 =====
+function makeQ(q,correct,type,exp){
   let choices=[correct,correct+1,correct-1,correct+2]
     .sort(()=>Math.random()-0.5);
 
@@ -97,8 +114,8 @@ function makeQ(q,correct,type){
     q,
     choices,
     correct:choices.indexOf(correct),
-    exp:`答えは ${correct}`,
-    type
+    type,
+    exp
   };
 }
 
@@ -106,40 +123,40 @@ function genMath(){
   const type=Math.floor(Math.random()*3);
 
   if(type===0){
-    let a=Math.floor(Math.random()*20)+1;
-    let b=Math.floor(Math.random()*20)+1;
-    return makeQ(`${a}+${b}=?`,a+b,"calc");
+    let a=Math.floor(Math.random()*20)+10;
+    let b=Math.floor(Math.random()*20)+10;
+    return makeQ(`${a}+${b}=?`,a+b,"calc",`${a}+${b}=${a+b}`);
   }
 
   if(type===1){
-    let base=100+Math.floor(Math.random()*200);
-    let per=[10,20,25,30][Math.floor(Math.random()*4)];
-    return makeQ(`${base}の${per}%は？`,base*per/100,"percent");
+    let base=1000;
+    let per=20;
+    return makeQ(`${base}の${per}%は？`,base*per/100,"percent",`${base}×${per}%=${base*per/100}`);
   }
 
   if(type===2){
-    return makeQ(`A:B=2:3 合計50 Aは？`,20,"ratio");
+    return makeQ(`A:B=2:3 合計50 Aは？`,20,"ratio","50×2/(2+3)=20");
   }
 }
 
-// ===== 画面
+function getQ(){
+  return genMath();
+}
+
+// ===== 画面 =====
 function changeTab(tab){
 
   if(tab==="home"){
     screen.innerHTML=`
     <div class="card">
       <h2>SPIトレーニング</h2>
-      <p>モード：非言語</p>
+      <p>🔥 連続正解：${combo}</p>
       <div class="btn" onclick="changeTab('study')">▶ 学習開始</div>
-    </div>
-    <div class="card">
-      <h3>苦手分析</h3>
-      ${showWeak()}
     </div>`;
   }
 
   if(tab==="study"){
-    let q=genMath();
+    let q=getQ();
     currentQ=q;
     answered=false;
 
@@ -148,7 +165,7 @@ function changeTab(tab){
       <h2>${q.q}</h2>
 
       ${q.choices.map((c,i)=>
-        `<div class="btn" id="btn${i}" onclick="answer(${i})">${c}</div>`
+        `<div class="btn" onclick="answer(${i})">${c}</div>`
       ).join("")}
 
       <div class="btn" onclick="answer('skip')">🤔 分からない</div>
@@ -158,7 +175,7 @@ function changeTab(tab){
   }
 }
 
-// ===== 回答
+// ===== 回答 =====
 function answer(i){
 
   if(answered) return;
@@ -166,48 +183,35 @@ function answer(i){
 
   const result=document.getElementById("result");
 
-  // ボタン無効化
   document.querySelectorAll(".btn").forEach(b=>{
     b.classList.add("disabled");
   });
 
   if(i==="skip"){
+    combo=0;
     result.innerText="🤔 分からない\n";
-    result.innerText += currentQ.exp;
+    result.innerText+=currentQ.exp;
     recordWeak(currentQ.type,false);
   }
   else if(i===currentQ.correct){
-    result.innerText="⭕ 正解\n";
-    result.innerText += currentQ.exp;
+    combo++;
+    result.innerText=`⭕ 正解（${combo}連続🔥）\n`;
+    result.innerText+=currentQ.exp;
     recordWeak(currentQ.type,true);
   }
   else{
+    combo=0;
     result.innerText="❌ 不正解\n";
-    result.innerText += currentQ.exp;
+    result.innerText+=currentQ.exp;
     recordWeak(currentQ.type,false);
   }
 
-  // 次へ
-  result.innerHTML += `
+  result.innerHTML+=`
     <div class="btn" onclick="changeTab('study')">次の問題 ▶</div>
   `;
 }
 
-// ===== 苦手表示
-function showWeak(){
-  let d=JSON.parse(localStorage.getItem("weak"))||{};
-  let html="";
-
-  Object.keys(d).forEach(k=>{
-    let total=d[k].ok+d[k].ng;
-    let rate=total?Math.floor(d[k].ok/total*100):0;
-    html+=`<p>${k}：${rate}%</p>`;
-  });
-
-  return html || "データなし";
-}
-
-// 初期
+// ===== 初期表示 =====
 changeTab("home");
 
 </script>
