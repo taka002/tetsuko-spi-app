@@ -1,12 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>徹子AI</title>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background:linear-gradient(135deg,#1f2a44,#0a3d62,#0f2027);
+  color:#fff;
+}
+
+/* スプラッシュ */
+#splash{
+  position:fixed;width:100%;height:100%;
+  background:linear-gradient(#0f2027,#203a43);
+  display:flex;justify-content:center;align-items:center;
+  z-index:9999;
+}
+.glow{
+  width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(circle,#00f2fe,transparent);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%{transform:scale(0.8);}
+  50%{transform:scale(1.3);}
+  100%{transform:scale(0.8);}
+}
+
+/* UI */
+.header{
+  padding:18px;text-align:center;
+  background:rgba(255,255,255,0.05);
+}
+
+.main{padding:15px;padding-bottom:100px;}
+
+.card{
+  background:rgba(255,255,255,0.05);
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:15px;
+}
+
+.btn{
+  background:linear-gradient(135deg,#4facfe,#00f2fe);
+  padding:16px;
+  border-radius:15px;
+  margin-top:12px;
+  text-align:center;
+}
+
+.progress{
+  height:10px;
+  background:#333;
+  border-radius:10px;
+}
+
+.bar{
+  height:100%;
+  background:linear-gradient(90deg,#00f2fe,#4facfe);
+  border-radius:10px;
+}
+
+/* カレンダー */
+.calendar{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:5px;
+  margin-top:10px;
+}
+.day{
+  background:#222;
+  padding:10px;
+  text-align:center;
+  border-radius:8px;
+  font-size:12px;
+}
+.done{ background:#00f2fe; color:#000; }
+.today{ border:2px solid #fff; }
+
+/* ナビ */
+.nav{
+  position:fixed;bottom:0;width:100%;
+  background:#111;
+  display:flex;justify-content:space-around;
+  padding:10px 0;
+}
+.active{color:#00f2fe;}
+</style>
+</head>
+
+<body>
+
+<!-- スプラッシュ -->
+<div id="splash">
+  <div style="text-align:center">
+    <div class="glow"></div>
+    <h1>徹子AI</h1>
+    <p>タップして開始</p>
+  </div>
+</div>
+
+<div class="header">📱 徹子AI</div>
+<div class="main" id="screen"></div>
+
+<div class="nav">
+  <div onclick="changeTab('home', this)" class="active">🏠</div>
+  <div onclick="changeTab('study', this)">📚</div>
+</div>
+
 <script>
 
-// ===== DOM =====
-const screen = document.getElementById("screen");
-
-// ===== 自動起動（③）=====
-window.onload = () => {
-  startApp();
-};
+// ===== DOM安全取得 =====
+function getScreen(){
+  return document.getElementById("screen");
+}
 
 // ===== 音声 =====
 function speak(text){
@@ -19,11 +131,10 @@ function speak(text){
 function startApp(){
   speak("こんにちは、徹子です");
 
-  // スプラッシュ消す
-  const s = document.getElementById("splash");
+  const s=document.getElementById("splash");
   if(s) s.style.display="none";
 
-  updateLogin(); // ②ログイン記録
+  updateLogin();
   render();
 }
 
@@ -46,7 +157,7 @@ function addXP(v){
   save();
 }
 
-// ===== ログイン記録 =====
+// ===== ログイン =====
 function getLoginData(){
   return JSON.parse(localStorage.getItem("login")) || {};
 }
@@ -58,7 +169,6 @@ function updateLogin(){
   localStorage.setItem("login", JSON.stringify(login));
 }
 
-// ===== 連続ログイン =====
 function getStreak(){
   let login = getLoginData();
   let count=0;
@@ -100,11 +210,16 @@ function getDaily(){
   let d=JSON.parse(localStorage.getItem("daily"))||{date:today,count:0,done:false};
 
   if(d.date!==today){
+    localStorage.setItem("yesterday", JSON.stringify(d));
     d={date:today,count:0,done:false};
   }
 
   localStorage.setItem("daily",JSON.stringify(d));
   return d;
+}
+
+function getYesterday(){
+  return JSON.parse(localStorage.getItem("yesterday")) || {count:0,done:false};
 }
 
 function addDaily(){
@@ -127,13 +242,16 @@ let questions=[
 
 // ===== 画面 =====
 function changeTab(tab,el){
+  const screen = getScreen();
+  if(!screen) return;
+
   let html="";
   const percent=Math.floor((user.xp/nextXP())*100);
   const daily=getDaily();
+  const yesterday=getYesterday();
 
   if(tab==="home"){
     html=`
-
     <div class="card">
       <h2>Lv.${user.level}</h2>
       <p>あと ${nextXP()-user.xp} XP</p>
@@ -148,9 +266,15 @@ function changeTab(tab,el){
     </div>
 
     <div class="card">
-      <h3>🎯 今日の達成</h3>
+      <h3>🎯 今日</h3>
       <p>${daily.count}/5 問</p>
       ${daily.done ? "<p>🎉 完了！</p>" : ""}
+    </div>
+
+    <div class="card">
+      <h3>📅 昨日</h3>
+      <p>${yesterday.count}/5 問</p>
+      ${yesterday.done ? "<p>✔ 達成済み</p>" : "<p>未達成</p>"}
     </div>
 
     <div class="btn" onclick="changeTab('study', document.querySelectorAll('.nav div')[1])">
@@ -177,25 +301,29 @@ function changeTab(tab,el){
   }
 
   screen.innerHTML=html;
+
   document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
-  el.classList.add("active");
+  if(el) el.classList.add("active");
 }
 
 // ===== 判定 =====
 function answer(i){
   const q=questions[0];
 
+  const resultEl = document.getElementById("result");
+
   if(i===q.correct){
-    result.innerText="⭕ 正解";
+    resultEl.innerText="⭕ 正解";
     combo++;
     addXP(10+combo);
   }else{
-    result.innerText="❌";
+    resultEl.innerText="❌";
     combo=0;
     addXP(2);
   }
 
   addDaily();
+  updateLogin();
   render();
 }
 
@@ -204,7 +332,17 @@ function save(){
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== 初期描画（④保険）=====
-render();
+// ===== 描画 =====
+function render(){
+  changeTab("home", document.querySelector(".nav div"));
+}
+
+// ===== 初期起動（絶対安全） =====
+window.onload = () => {
+  startApp();
+};
 
 </script>
+
+</body>
+</html>
