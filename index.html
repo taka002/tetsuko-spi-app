@@ -69,14 +69,40 @@ body{
 
 <script>
 
-// ===== 画面 =====
 const screen = document.getElementById("screen");
 
 // ===== データ =====
 let combo = 0;
 let currentQ = null;
 let answered = false;
-let lastQ = ""; // ← STEP6
+let lastQ = "";
+
+// ★STEP7：ユーザー成長
+let user = JSON.parse(localStorage.getItem("user")) || {
+  xp:0,
+  level:1
+};
+
+function saveUser(){
+  localStorage.setItem("user",JSON.stringify(user));
+}
+
+function nextXP(){
+  return user.level * 50;
+}
+
+function addXP(v){
+  user.xp += v;
+
+  if(user.xp >= nextXP()){
+    user.xp = user.xp - nextXP();
+    user.level++;
+
+    alert("🎉 レベルアップ！");
+  }
+
+  saveUser();
+}
 
 // ===== 苦手分析 =====
 function recordWeak(type,ok){
@@ -111,34 +137,25 @@ function makeQ(q,correct,type,exp){
   let choices=[correct,correct+1,correct-1,correct+2]
     .sort(()=>Math.random()-0.5);
 
-  return {
-    q,
-    choices,
-    correct:choices.indexOf(correct),
-    type,
-    exp
-  };
+  return {q,choices,correct:choices.indexOf(correct),type,exp};
 }
 
 function genMath(){
 
   const type = Math.floor(Math.random()*3);
 
-  // 足し算
   if(type===0){
     let a=Math.floor(Math.random()*50)+1;
     let b=Math.floor(Math.random()*50)+1;
     return makeQ(`${a}+${b}=?`,a+b,"calc",`${a}+${b}=${a+b}`);
   }
 
-  // 割合
   if(type===1){
     let base=[100,200,300,500,800,1000][Math.floor(Math.random()*6)];
     let per=[10,20,25,30,40,50][Math.floor(Math.random()*6)];
     return makeQ(`${base}の${per}%は？`,base*per/100,"percent",`${base}×${per}%=${base*per/100}`);
   }
 
-  // 比
   if(type===2){
     let total=[40,50,60,80,100][Math.floor(Math.random()*5)];
     let aRatio=[1,2,3][Math.floor(Math.random()*3)];
@@ -154,17 +171,14 @@ function genMath(){
   }
 }
 
-// ===== STEP6：重複防止 =====
+// 重複防止
 function getQ(){
-
   let q;
-
   do{
     q = genMath();
   }while(q.q === lastQ);
 
   lastQ = q.q;
-
   return q;
 }
 
@@ -176,6 +190,8 @@ function changeTab(tab){
     <div class="card">
       <h2>SPIトレーニング</h2>
       <p>🔥 連続正解：${combo}</p>
+      <p>Lv：${user.level}</p>
+      <p>XP：${user.xp} / ${nextXP()}</p>
       <div class="btn" onclick="changeTab('study')">▶ 学習開始</div>
     </div>`;
   }
@@ -220,6 +236,9 @@ function answer(i){
   }
   else if(i===currentQ.correct){
     combo++;
+
+    addXP(10 + combo); // ★コンボでXP増加
+
     result.innerText=`⭕ 正解（${combo}連続🔥）\n`;
     result.innerText+=currentQ.exp;
     recordWeak(currentQ.type,true);
@@ -236,7 +255,7 @@ function answer(i){
   `;
 }
 
-// ===== 初期 =====
+// 初期
 changeTab("home");
 
 </script>
