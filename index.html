@@ -8,12 +8,12 @@
 <style>
 body{
   margin:0;
-  font-family:-apple-system,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
   background:linear-gradient(135deg,#1e1e2f,#0f2027);
   color:#fff;
 }
 
-/* スプラッシュ */
+/* ===== スプラッシュ ===== */
 #splash{
   position:fixed;width:100%;height:100%;
   background:linear-gradient(#0f2027,#203a43);
@@ -31,20 +31,34 @@ body{
   100%{transform:scale(0.8);}
 }
 
+/* ===== UI ===== */
+.header{
+  padding:18px;text-align:center;
+  background:rgba(255,255,255,0.05);
+}
+
+.main{padding:15px;padding-bottom:90px;}
+
 .card{
   background:rgba(255,255,255,0.05);
-  padding:20px;border-radius:20px;margin:10px;
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:15px;
 }
 
 .btn{
   background:linear-gradient(135deg,#4facfe,#00f2fe);
-  padding:12px;border-radius:10px;margin-top:10px;text-align:center;
+  padding:16px;
+  border-radius:15px;
+  margin-top:12px;
+  text-align:center;
+  font-size:16px;
 }
 
-/* レベルアップ */
+/* ===== 演出 ===== */
 #levelUp{
   position:fixed;width:100%;height:100%;
-  background:rgba(0,0,0,0.7);
+  background:rgba(0,0,0,0.8);
   display:none;justify-content:center;align-items:center;
   z-index:9999;
 }
@@ -53,10 +67,19 @@ body{
   position:fixed;
   top:40%;left:50%;
   transform:translate(-50%,-50%) scale(0.5);
-  font-size:80px;
+  font-size:90px;
   opacity:0;
   transition:0.3s;
 }
+
+/* ===== ナビ ===== */
+.nav{
+  position:fixed;bottom:0;width:100%;
+  background:#111;
+  display:flex;justify-content:space-around;
+  padding:10px 0;
+}
+.active{color:#00f2fe;}
 </style>
 </head>
 
@@ -82,7 +105,13 @@ body{
 <!-- スタンプ -->
 <div id="stamp"></div>
 
-<div id="screen"></div>
+<div class="header">📱 徹子AI</div>
+<div class="main" id="screen"></div>
+
+<div class="nav">
+  <div onclick="changeTab('home', this)" class="active">🏠</div>
+  <div onclick="changeTab('study', this)">📚</div>
+</div>
 
 <script>
 
@@ -99,16 +128,12 @@ function startApp(){
   splash.style.display="none";
 }
 
-// ===== RPG =====
-let user = JSON.parse(localStorage.getItem("user")) || {
-  xp:0,level:1
-};
-
+// ===== データ =====
+let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
 let combo = 0;
 
-function nextXP(){
-  return user.level * 50;
-}
+// ===== XP =====
+function nextXP(){ return user.level * 50; }
 
 function addXP(v){
   user.xp += v;
@@ -134,11 +159,9 @@ function getBadge(){
 function showLevelUp(){
   levelText.innerText="Lv."+user.level;
   levelUp.style.display="flex";
-  speak("レベルアップ");
+  speak("レベルアップよ");
 
-  setTimeout(()=>{
-    levelUp.style.display="none";
-  },1500);
+  setTimeout(()=>levelUp.style.display="none",1500);
 }
 
 // ===== スタンプ =====
@@ -156,13 +179,10 @@ function showStamp(t){
 // ===== デイリー =====
 function getDaily(){
   const today=new Date().toDateString();
-
-  let d=JSON.parse(localStorage.getItem("daily"))||{
-    date:today,count:0
-  };
+  let d=JSON.parse(localStorage.getItem("daily"))||{date:today,count:0,done:false};
 
   if(d.date!==today){
-    d={date:today,count:0};
+    d={date:today,count:0,done:false};
   }
 
   localStorage.setItem("daily",JSON.stringify(d));
@@ -172,45 +192,80 @@ function getDaily(){
 function addDaily(){
   let d=getDaily();
   d.count++;
+
+  if(d.count>=5 && !d.done){
+    d.done=true;
+    speak("ミッション達成よ");
+    showStamp("🎉");
+    addXP(20);
+  }
+
   localStorage.setItem("daily",JSON.stringify(d));
 }
 
 // ===== 問題 =====
-let q={q:"3+5=?",c:["6","7","8","9"],a:2};
+let questions=[
+  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2,explanation:"3+5=8です"}
+];
+let current=0;
 
 // ===== 画面 =====
-function render(){
-
+function changeTab(tab,el){
+  let html="";
   const percent=Math.floor((user.xp/nextXP())*100);
   const daily=getDaily();
 
-  screen.innerHTML=`
-  <div class="card">
-    <h3>Lv.${user.level} ${getBadge()}</h3>
-    <p>${user.xp}/${nextXP()} XP</p>
-    <div style="height:10px;background:#333;border-radius:10px;">
-      <div style="width:${percent}%;height:100%;background:#00f2fe;"></div>
+  if(tab==="home"){
+    html=`
+    <div class="card">
+      <h2>Lv.${user.level} ${getBadge()}</h2>
+      <p>${user.xp}/${nextXP()} XP</p>
+      <div style="height:10px;background:#333;border-radius:10px;">
+        <div style="width:${percent}%;height:100%;background:#00f2fe;"></div>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h3>🔥 デイリーミッション</h3>
-    <p>${daily.count}/5 問</p>
-  </div>
+    <div class="card">
+      <h3>🔥 デイリー</h3>
+      <p>${daily.count}/5 問</p>
+    </div>
 
-  <div class="card">
-    <p>${q.q}</p>
-    ${q.c.map((c,i)=>`<div class="btn" onclick="answer(${i})">${c}</div>`).join("")}
-    <p id="result"></p>
-  </div>
-  `;
+    <div class="btn" onclick="changeTab('study', document.querySelectorAll('.nav div')[1])">
+      ▶ 学習スタート
+    </div>
+    `;
+  }
+
+  if(tab==="study"){
+    const q=questions[current];
+
+    html=`
+    <div class="card" style="padding:30px;">
+      <h2>${q.q}</h2>
+
+      ${q.choices.map((c,i)=>
+        `<div class="btn" onclick="answer(${i})">${c}</div>`
+      ).join("")}
+
+      <p id="result" style="font-size:22px;margin-top:10px;"></p>
+      <p>${q.explanation}</p>
+
+      <p>🔥 コンボ ${combo}</p>
+    </div>
+    `;
+  }
+
+  screen.innerHTML=html;
+  document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
+  el.classList.add("active");
 }
 
 // ===== 判定 =====
 function answer(i){
+  const q=questions[current];
 
-  if(i===q.a){
-    result.innerText="⭕";
+  if(i===q.correct){
+    result.innerText="⭕ 正解";
     combo++;
     addXP(10+combo);
     showStamp("⭕");
@@ -231,7 +286,11 @@ function save(){
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// 初期
+// ===== 初期 =====
+function render(){
+  changeTab("home",document.querySelector(".nav div"));
+}
+
 render();
 
 </script>
