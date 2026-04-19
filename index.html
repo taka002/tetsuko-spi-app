@@ -1,15 +1,210 @@
+<script>
+
+// ===== DOM =====
 const screen = document.getElementById("screen");
 
+// ===== 自動起動（③）=====
 window.onload = () => {
   startApp();
 };
 
+// ===== 音声 =====
+function speak(text){
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="ja-JP";
+  speechSynthesis.speak(u);
+}
+
+// ===== 起動 =====
 function startApp(){
   speak("こんにちは、徹子です");
 
+  // スプラッシュ消す
   const s = document.getElementById("splash");
   if(s) s.style.display="none";
 
-  updateLogin();
+  updateLogin(); // ②ログイン記録
   render();
 }
+
+// ===== データ =====
+let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
+let combo = 0;
+
+// ===== XP =====
+function nextXP(){ return user.level * 50; }
+
+function addXP(v){
+  user.xp += v;
+
+  if(user.xp >= nextXP()){
+    user.xp = 0;
+    user.level++;
+    speak("レベルアップ");
+  }
+
+  save();
+}
+
+// ===== ログイン記録 =====
+function getLoginData(){
+  return JSON.parse(localStorage.getItem("login")) || {};
+}
+
+function updateLogin(){
+  let login = getLoginData();
+  const today = new Date().toDateString();
+  login[today] = true;
+  localStorage.setItem("login", JSON.stringify(login));
+}
+
+// ===== 連続ログイン =====
+function getStreak(){
+  let login = getLoginData();
+  let count=0;
+  let d=new Date();
+
+  while(true){
+    const key=d.toDateString();
+    if(login[key]) count++;
+    else break;
+    d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+
+// ===== カレンダー =====
+function renderCalendar(){
+  let login = getLoginData();
+  let html="<div class='calendar'>";
+
+  for(let i=6;i>=0;i--){
+    let d=new Date();
+    d.setDate(d.getDate()-i);
+    const key=d.toDateString();
+
+    let cls="day";
+    if(login[key]) cls+=" done";
+    if(i===0) cls+=" today";
+
+    html+=`<div class="${cls}">${d.getDate()}</div>`;
+  }
+
+  html+="</div>";
+  return html;
+}
+
+// ===== デイリー =====
+function getDaily(){
+  const today=new Date().toDateString();
+  let d=JSON.parse(localStorage.getItem("daily"))||{date:today,count:0,done:false};
+
+  if(d.date!==today){
+    d={date:today,count:0,done:false};
+  }
+
+  localStorage.setItem("daily",JSON.stringify(d));
+  return d;
+}
+
+function addDaily(){
+  let d=getDaily();
+  d.count++;
+
+  if(d.count>=5 && !d.done){
+    d.done=true;
+    speak("ミッション達成");
+    addXP(20);
+  }
+
+  localStorage.setItem("daily",JSON.stringify(d));
+}
+
+// ===== 問題 =====
+let questions=[
+  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2}
+];
+
+// ===== 画面 =====
+function changeTab(tab,el){
+  let html="";
+  const percent=Math.floor((user.xp/nextXP())*100);
+  const daily=getDaily();
+
+  if(tab==="home"){
+    html=`
+
+    <div class="card">
+      <h2>Lv.${user.level}</h2>
+      <p>あと ${nextXP()-user.xp} XP</p>
+      <div class="progress">
+        <div class="bar" style="width:${percent}%"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔥 連続ログイン ${getStreak()}日</h3>
+      ${renderCalendar()}
+    </div>
+
+    <div class="card">
+      <h3>🎯 今日の達成</h3>
+      <p>${daily.count}/5 問</p>
+      ${daily.done ? "<p>🎉 完了！</p>" : ""}
+    </div>
+
+    <div class="btn" onclick="changeTab('study', document.querySelectorAll('.nav div')[1])">
+      ▶ 学習スタート
+    </div>
+    `;
+  }
+
+  if(tab==="study"){
+    const q=questions[0];
+
+    html=`
+    <div class="card">
+      <h2>${q.q}</h2>
+
+      ${q.choices.map((c,i)=>
+        `<div class="btn" onclick="answer(${i})">${c}</div>`
+      ).join("")}
+
+      <p id="result"></p>
+      <p>🔥 コンボ ${combo}</p>
+    </div>
+    `;
+  }
+
+  screen.innerHTML=html;
+  document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
+  el.classList.add("active");
+}
+
+// ===== 判定 =====
+function answer(i){
+  const q=questions[0];
+
+  if(i===q.correct){
+    result.innerText="⭕ 正解";
+    combo++;
+    addXP(10+combo);
+  }else{
+    result.innerText="❌";
+    combo=0;
+    addXP(2);
+  }
+
+  addDaily();
+  render();
+}
+
+// ===== 保存 =====
+function save(){
+  localStorage.setItem("user",JSON.stringify(user));
+}
+
+// ===== 初期描画（④保険）=====
+render();
+
+</script>
