@@ -145,6 +145,9 @@ function speak(text){
 function startApp(){
   speak("こんにちは、徹子です");
   splash.style.display="none";
+
+  // 🔥 ここ重要（空画面防止）
+  render();
 }
 
 // ===== データ =====
@@ -238,7 +241,7 @@ function changeTab(tab,el){
 
     <div class="card">
       <h2>Lv.${user.level} ${getBadge()}</h2>
-      <p>${user.xp}/${nextXP()} XP</p>
+      <p>あと ${nextXP()-user.xp} XP</p>
       <div class="progress">
         <div class="bar" style="width:${percent}%"></div>
       </div>
@@ -246,7 +249,7 @@ function changeTab(tab,el){
 
     <div class="card">
       <h3>🔥 デイリー</h3>
-      <p>${daily.count}/5 問</p>
+      <p>${daily.count}/5 問（あと ${5-daily.count}）</p>
       <div class="progress">
         <div class="bar" style="width:${daily.count*20}%"></div>
       </div>
@@ -314,12 +317,10 @@ function save(){
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== 初期 =====
+// ===== 初期描画（←削除しない） =====
 function render(){
   changeTab("home",document.querySelector(".nav div"));
 }
-
-render();
 
 </script>
 </body>
