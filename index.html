@@ -9,8 +9,6 @@ body{
   background:linear-gradient(135deg,#1f2a44,#0a3d62,#0f2027);
   color:#fff;
 }
-
-/* スプラッシュ */
 #splash{
   position:fixed;width:100%;height:100%;
   background:linear-gradient(#0f2027,#203a43);
@@ -27,22 +25,17 @@ body{
   50%{transform:scale(1.3);}
   100%{transform:scale(0.8);}
 }
-
-/* UI */
 .header{
   padding:18px;text-align:center;
   background:rgba(255,255,255,0.05);
 }
-
 .main{padding:15px;padding-bottom:100px;}
-
 .card{
   background:rgba(255,255,255,0.05);
   border-radius:20px;
   padding:20px;
   margin-bottom:15px;
 }
-
 .btn{
   background:linear-gradient(135deg,#4facfe,#00f2fe);
   padding:16px;
@@ -51,30 +44,11 @@ body{
   text-align:center;
   font-weight:bold;
 }
-
 .progress{height:10px;background:#333;border-radius:10px;}
 .bar{height:100%;background:linear-gradient(90deg,#00f2fe,#4facfe);}
-
-.calendar{
-  display:grid;
-  grid-template-columns:repeat(7,1fr);
-  gap:5px;margin-top:10px;
-}
-.day{
-  background:#222;padding:10px;text-align:center;
-  border-radius:8px;font-size:12px;
-}
-.done{background:#00f2fe;color:#000;}
-.today{border:2px solid #fff;}
-
 canvas{
-  width:100%;
-  height:200px;
-  background:#111;
-  border-radius:10px;
-  margin-top:10px;
+  width:100%;height:200px;background:#111;border-radius:10px;margin-top:10px;
 }
-
 .nav{
   position:fixed;bottom:0;width:100%;
   background:#111;
@@ -95,26 +69,19 @@ canvas{
   <div onclick="showWeak()">📊</div>
 </div><script>
 
-// ===== 音声 =====
-function speak(t){
-  const u=new SpeechSynthesisUtterance(t);
-  u.lang="ja-JP";
-  speechSynthesis.speak(u);
-}
+// ===== データ =====
+let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
+let combo=0;
+let mode=null;
+let qIndex=0;
+let totalQ=10;
+let currentQ=null;
 
 // ===== 起動 =====
 function startApp(){
   splash.style.display="none";
-  speak("こんにちは");
-  updateLogin();
   render();
 }
-
-// ===== データ =====
-let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
-let combo=0;
-let currentMode="言語";
-let currentQ=null;
 
 // ===== XP =====
 function nextXP(){return user.level*50;}
@@ -123,48 +90,16 @@ function addXP(v){
   if(user.xp>=nextXP()){
     user.xp=0;
     user.level++;
-    speak("レベルアップ");
   }
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== 偏差値 =====
-function hensachi(rate){
-  return Math.floor(50+(rate-50)/2);
-}
-
-// ===== ログイン =====
-function getLogin(){return JSON.parse(localStorage.getItem("login"))||{};}
-function updateLogin(){
-  let d=getLogin();
-  d[new Date().toDateString()]=true;
-  localStorage.setItem("login",JSON.stringify(d));
-}
-function getStreak(){
-  let d=getLogin(),c=0,date=new Date();
-  while(d[date.toDateString()]){
-    c++;date.setDate(date.getDate()-1);
-  }
-  return c;
-}
-
-// ===== カレンダー =====
-function calendar(){
-  let d=getLogin(),html="<div class='calendar'>";
-  for(let i=6;i>=0;i--){
-    let day=new Date();day.setDate(day.getDate()-i);
-    let key=day.toDateString();
-    html+=`<div class="day ${d[key]?"done":""} ${i==0?"today":""}">${day.getDate()}</div>`;
-  }
-  return html+"</div>";
-}
-
-// ===== 苦手分析 =====
-function recordWeak(mode,ok){
+// ===== 苦手 =====
+function recordWeak(m,ok){
   let d=JSON.parse(localStorage.getItem("weak"))||{
     言語:{ok:0,ng:0},非言語:{ok:0,ng:0},性格:{ok:0,ng:0}
   };
-  ok?d[mode].ok++:d[mode].ng++;
+  ok?d[m].ok++:d[m].ng++;
   localStorage.setItem("weak",JSON.stringify(d));
 }
 
@@ -181,30 +116,14 @@ function showWeak(){
   </div>`;
 }
 
-// ===== デイリー =====
-function getDaily(){
-  let today=new Date().toDateString();
-  let d=JSON.parse(localStorage.getItem("daily"))||{date:today,count:0,done:false};
-  if(d.date!==today)d={date:today,count:0,done:false};
-  localStorage.setItem("daily",JSON.stringify(d));
-  return d;
-}
-function addDaily(){
-  let d=getDaily();
-  d.count++;
-  if(d.count>=5&&!d.done){
-    d.done=true;
-    speak("達成");
-    addXP(20);
-  }
-  localStorage.setItem("daily",JSON.stringify(d));
-}
-
-// ===== 問題生成（強化版） =====
+// ===== 問題生成 =====
 function genWord(){
   const list=[
-    ["迅速","素早い"],["慎重","注意深い"],["曖昧","不明確"],
-    ["顕著","目立つ"],["柔軟","しなやか"]
+    ["迅速","素早い"],
+    ["慎重","注意深い"],
+    ["曖昧","不明確"],
+    ["顕著","目立つ"],
+    ["簡潔","短く分かりやすい"]
   ];
   let x=list[Math.floor(Math.random()*list.length)];
   let choices=[x[1],"遅い","弱い","重い"].sort(()=>Math.random()-0.5);
@@ -212,8 +131,8 @@ function genWord(){
 }
 
 function genMath(){
-  let a=Math.floor(Math.random()*20)+1;
-  let b=Math.floor(Math.random()*20)+1;
+  let a=Math.floor(Math.random()*30)+1;
+  let b=Math.floor(Math.random()*30)+1;
   let c=a+b;
   let choices=[c,c+1,c-1,c+2].sort(()=>Math.random()-0.5);
   return {q:`${a}+${b}=?`,choices,correct:choices.indexOf(c),exp:`${a}+${b}=${c}`};
@@ -222,36 +141,99 @@ function genMath(){
 function genPerson(){
   return {q:"あなたに近いのは？",
     choices:["計画型","直感型","協調型","単独型"],
-    correct:null,exp:"正解なし"};
+    correct:null,exp:"記録しました"};
 }
 
 function getQ(){
-  if(currentMode==="言語")return genWord();
-  if(currentMode==="非言語")return genMath();
+  if(mode==="言語")return genWord();
+  if(mode==="非言語")return genMath();
   return genPerson();
 }
 
-// ===== 手書き =====
+// ===== モード開始 =====
+function startMode(m){
+  mode=m;
+  qIndex=0;
+  nextQuestion();
+}
+
+// ===== 問題進行 =====
+function nextQuestion(){
+  if(qIndex>=totalQ){
+    screen.innerHTML=`<div class="card"><h2>終了</h2><p>お疲れ様</p></div>`;
+    return;
+  }
+  currentQ=getQ();
+  qIndex++;
+
+  screen.innerHTML=`
+  <div class="card">
+    <h2>Q${qIndex}/${totalQ}</h2>
+    <h3>${currentQ.q}</h3>
+    ${currentQ.choices.map((c,i)=>`<div class="btn" onclick="answer(${i})">${c}</div>`).join("")}
+    <div class="btn" onclick="answer('skip')">🤔 分からない</div>
+    <p id="result"></p>
+    <p id="exp"></p>
+    <p>🔥 コンボ ${combo}</p>
+    <canvas id="memo"></canvas>
+    <div class="btn" onclick="clearMemo()">メモ消す</div>
+  </div>`;
+  
+  setTimeout(initMemo,100);
+}
+
+// ===== 回答 =====
+function answer(i){
+
+  if(currentQ.correct===null){
+    result.innerText="記録";
+    exp.innerText=currentQ.exp;
+    setTimeout(nextQuestion,1000);
+    return;
+  }
+
+  if(i==="skip"){
+    result.innerText="🤔";
+    exp.innerText=currentQ.exp;
+    combo=0;
+    setTimeout(nextQuestion,1000);
+    return;
+  }
+
+  if(i===currentQ.correct){
+    result.innerText="⭕";
+    combo++;
+    addXP(10+combo);
+    recordWeak(mode,true);
+  }else{
+    result.innerText="❌";
+    combo=0;
+    recordWeak(mode,false);
+  }
+
+  exp.innerText=currentQ.exp;
+  setTimeout(nextQuestion,1000);
+}
+
+// ===== メモ =====
 function initMemo(){
   const c=document.getElementById("memo");
   const ctx=c.getContext("2d");
   c.width=c.offsetWidth;
   c.height=c.offsetHeight;
-  let drawing=false;
+  let d=false;
 
-  c.addEventListener("touchstart",()=>drawing=true);
+  c.addEventListener("touchstart",()=>d=true);
   c.addEventListener("touchmove",e=>{
-    if(!drawing)return;
+    if(!d)return;
     let t=e.touches[0];
     let r=c.getBoundingClientRect();
-    ctx.lineWidth=3;
-    ctx.strokeStyle="#00f2fe";
     ctx.lineTo(t.clientX-r.left,t.clientY-r.top);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(t.clientX-r.left,t.clientY-r.top);
   });
-  c.addEventListener("touchend",()=>{drawing=false;ctx.beginPath();});
+  c.addEventListener("touchend",()=>d=false);
 }
 
 function clearMemo(){
@@ -261,93 +243,23 @@ function clearMemo(){
 
 // ===== 画面 =====
 function changeTab(tab,el){
-  let html="";
-  const p=Math.floor((user.xp/nextXP())*100);
-  const d=getDaily();
-
   if(tab==="home"){
-    html=`
+    screen.innerHTML=`
     <div class="card">
       <h2>Lv.${user.level}</h2>
-      <p>あと ${nextXP()-user.xp} XP</p>
-      <div class="progress"><div class="bar" style="width:${p}%"></div></div>
+      <p>XP ${user.xp}/${nextXP()}</p>
     </div>
 
     <div class="card">
-      <h3>🔥 ${getStreak()}日ログイン</h3>
-      ${calendar()}
-    </div>
-
-    <div class="card">
-      <h3>🎯 今日 ${d.count}/5</h3>
-      ${d.done?"達成済み":""}
-    </div>
-
-    <div class="card">
-      <h3>🎮 モード選択</h3>
+      <h3>モード選択</h3>
       <div class="btn" onclick="startMode('言語')">言語</div>
       <div class="btn" onclick="startMode('非言語')">非言語</div>
       <div class="btn" onclick="startMode('性格')">性格</div>
     </div>`;
   }
 
-  if(tab==="study"){
-    let q=getQ();
-    currentQ=q;
-
-    html=`
-    <div class="card">
-      <h2>${q.q}</h2>
-      ${q.choices.map((c,i)=>`<div class="btn" onclick="answer(${i})">${c}</div>`).join("")}
-      <div class="btn" onclick="answer('skip')">🤔 分からない</div>
-      <p id="result"></p>
-      <p id="exp"></p>
-      <p>🔥 コンボ ${combo}</p>
-
-      <canvas id="memo"></canvas>
-      <div class="btn" onclick="clearMemo()">メモ消す</div>
-
-      <div class="btn" onclick="changeTab('study')">次へ ▶</div>
-    </div>`;
-  }
-
-  screen.innerHTML=html;
   document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
   if(el) el.classList.add("active");
-
-  setTimeout(()=>{if(tab==="study")initMemo();},100);
-}
-
-// ===== 回答 =====
-function answer(i){
-
-  if(currentQ.correct===null){
-    result.innerText="記録";
-    exp.innerText=currentQ.exp;
-    return;
-  }
-
-  if(i==="skip"){
-    result.innerText="🤔 分からない";
-    exp.innerText=currentQ.exp;
-    combo=0;
-    return;
-  }
-
-  if(i===currentQ.correct){
-    result.innerText="⭕ 正解";
-    combo++;
-    addXP(10+combo);
-    recordWeak(currentMode,true);
-  }else{
-    result.innerText="❌";
-    combo=0;
-    recordWeak(currentMode,false);
-  }
-
-  exp.innerText=currentQ.exp;
-  addDaily();
-  updateLogin();
 }
 
 // ===== 初期 =====
