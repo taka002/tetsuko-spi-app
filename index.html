@@ -13,6 +13,7 @@ body{
   color:#fff;
 }
 
+/* スプラッシュ */
 #splash{
   position:fixed;width:100%;height:100%;
   background:linear-gradient(#0f2027,#203a43);
@@ -51,9 +52,15 @@ body{
   grid-template-columns:repeat(7,1fr);
   gap:5px;
 }
-.day{background:#222;padding:10px;border-radius:8px;font-size:12px;}
-.done{background:#00f2fe;color:#000;}
-.today{border:2px solid #fff;}
+.day{
+  background:#222;
+  padding:10px;
+  text-align:center;
+  border-radius:8px;
+  font-size:12px;
+}
+.done{ background:#00f2fe;color:#000; }
+.today{ border:2px solid #fff; }
 
 .nav{
   position:fixed;bottom:0;width:100%;
@@ -84,7 +91,8 @@ body{
 
 <script>
 
-// ===== 初期強制描画（黒画面防止） =====
+// ===== 必須（黒画面防止） =====
+const screen = document.getElementById("screen");
 window.onload = () => render();
 
 // ===== 音声 =====
@@ -98,6 +106,7 @@ function speak(t){
 function startApp(){
   document.getElementById("splash").style.display="none";
   updateLogin();
+  speak("こんにちは");
   render();
 }
 
@@ -166,21 +175,16 @@ function addDaily(){
 // ===== シャッフル =====
 function shuffle(a){return a.sort(()=>Math.random()-0.5);}
 
-// ===== 言語（強化版） =====
+// ===== 言語（強化） =====
 function genWord(){
   const data=[
     ["迅速","素早い"],["慎重","注意深い"],["曖昧","はっきりしない"],
     ["堅実","安定している"],["柔軟","変化に対応できる"]
   ];
-
-  const wrongs=["遅い","重い","弱い","曖昧","雑","不安定"];
+  const wrongs=["遅い","重い","弱い","雑","不安定","曖昧"];
 
   let x=data[Math.floor(Math.random()*data.length)];
-
-  let choices = shuffle([
-    x[1],
-    ...shuffle(wrongs).slice(0,3)
-  ]);
+  let choices=shuffle([x[1],...shuffle(wrongs).slice(0,3)]);
 
   return {
     q:`「${x[0]}」の意味は？`,
@@ -195,13 +199,7 @@ function genMath(){
   let a=Math.floor(Math.random()*20)+1;
   let b=Math.floor(Math.random()*20)+1;
   let correct=a+b;
-
-  let choices=shuffle([
-    correct,
-    correct+1,
-    correct-1,
-    correct+2
-  ]);
+  let choices=shuffle([correct,correct+1,correct-1,correct+2]);
 
   return {
     q:`${a}+${b}=?`,
@@ -274,7 +272,7 @@ function changeTab(tab,el){
 
   if(tab==="study"){
     if(!currentQ){
-      html=`<div class="card">モード選択してください</div>`;
+      html=`<div class="card">モードを選んでください</div>`;
     }else{
       html=`
       <div class="card">
@@ -290,11 +288,13 @@ function changeTab(tab,el){
   }
 
   screen.innerHTML=html;
+
+  document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
+  if(el) el.classList.add("active");
 }
 
 // ===== 回答 =====
 function answer(i){
-
   if(currentQ.correct===null){
     result.innerText="記録しました";
     exp.innerText=currentQ.exp;
@@ -318,7 +318,7 @@ function answer(i){
 
 // ===== 初期 =====
 function render(){
-  changeTab("home");
+  changeTab("home",document.querySelector(".nav div"));
 }
 
 </script>
