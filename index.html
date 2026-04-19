@@ -1,30 +1,40 @@
-<!DOCTYPE html>
-<html lang="ja">
+<!DOCTYPE html><html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>徹子AI SPI 完全版</title>
-
-<style>
+<title>徹子AI SPI</title><style>
 body{
   margin:0;
-  font-family:sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
   background:linear-gradient(135deg,#1f2a44,#0a3d62,#0f2027);
   color:#fff;
 }
 
+/* スプラッシュ */
+#splash{
+  position:fixed;width:100%;height:100%;
+  background:linear-gradient(#0f2027,#203a43);
+  display:flex;justify-content:center;align-items:center;
+  z-index:9999;
+}
+.glow{
+  width:140px;height:140px;border-radius:50%;
+  background:radial-gradient(circle,#00f2fe,transparent);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{
+  0%{transform:scale(0.8);}
+  50%{transform:scale(1.3);}
+  100%{transform:scale(0.8);}
+}
+
+/* UI */
 .header{
-  padding:18px;
-  text-align:center;
+  padding:18px;text-align:center;
   background:rgba(255,255,255,0.05);
 }
 
-.main{
-  padding:15px;
-  padding-bottom:100px;
-  max-width:500px;
-  margin:auto;
-}
+.main{padding:15px;padding-bottom:100px;}
 
 .card{
   background:rgba(255,255,255,0.05);
@@ -43,35 +53,65 @@ body{
 }
 
 .progress{height:10px;background:#333;border-radius:10px;}
-.bar{height:100%;background:linear-gradient(90deg,#00f2fe,#4facfe);border-radius:10px;}
+.bar{height:100%;background:linear-gradient(90deg,#00f2fe,#4facfe);}
+
+.calendar{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:5px;margin-top:10px;
+}
+.day{
+  background:#222;padding:10px;text-align:center;
+  border-radius:8px;font-size:12px;
+}
+.done{background:#00f2fe;color:#000;}
+.today{border:2px solid #fff;}
+
+canvas{
+  width:100%;
+  height:200px;
+  background:#111;
+  border-radius:10px;
+  margin-top:10px;
+}
 
 .nav{
-  position:fixed;
-  bottom:0;
-  width:100%;
+  position:fixed;bottom:0;width:100%;
   background:#111;
-  display:flex;
-  justify-content:space-around;
+  display:flex;justify-content:space-around;
   padding:10px 0;
 }
-</style>
-</head>
+.active{color:#00f2fe;}
+</style></head><body><div id="splash" onclick="startApp()">
+  <div style="text-align:center">
+    <div class="glow"></div>
+    <h1>徹子AI SPI</h1>
+    <p>タップして開始</p>
+  </div>
+</div><div class="header">📱 徹子AI SPI</div>
+<div class="main" id="screen"></div><div class="nav">
+  <div onclick="changeTab('home', this)" class="active">🏠</div>
+  <div onclick="changeTab('study', this)">📚</div>
+  <div onclick="showWeak()">📊</div>
+</div><script>
 
-<body>
+// ===== 音声 =====
+function speak(t){
+  const u=new SpeechSynthesisUtterance(t);
+  u.lang="ja-JP";
+  speechSynthesis.speak(u);
+}
 
-<div class="header">📱 徹子AI SPI</div>
-<div class="main" id="screen"></div>
-
-<div class="nav">
-  <div onclick="home()">🏠</div>
-  <div onclick="studySelect()">📚</div>
-  <div onclick="examMenu()">📝</div>
-</div>
-
-<script>
+// ===== 起動 =====
+function startApp(){
+  splash.style.display="none";
+  speak("こんにちは");
+  updateLogin();
+  render();
+}
 
 // ===== データ =====
-let user=JSON.parse(localStorage.getItem("user"))||{xp:0,level:1};
+let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
 let combo=0;
 let currentMode="言語";
 let currentQ=null;
@@ -83,185 +123,237 @@ function addXP(v){
   if(user.xp>=nextXP()){
     user.xp=0;
     user.level++;
+    speak("レベルアップ");
   }
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== ランダム =====
-function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
-function shuffle(a){return a.sort(()=>Math.random()-0.5);}
+// ===== 偏差値 =====
+function hensachi(rate){
+  return Math.floor(50+(rate-50)/2);
+}
 
-// ===== 言語 =====
-function genWord(){
-  const data=[
-    ["迅速","素早い"],["慎重","注意深い"],["柔軟","対応できる"],
-    ["簡潔","短い"],["誠実","正直"],["冷静","落ち着いている"]
-  ];
-  const wrong=["遅い","雑","弱い","不安定","軽い","乱暴"];
-
-  let x=data[rand(0,data.length-1)];
-
-  let c=[x[1]];
-  while(c.length<4){
-    let w=wrong[rand(0,wrong.length-1)];
-    if(!c.includes(w)) c.push(w);
+// ===== ログイン =====
+function getLogin(){return JSON.parse(localStorage.getItem("login"))||{};}
+function updateLogin(){
+  let d=getLogin();
+  d[new Date().toDateString()]=true;
+  localStorage.setItem("login",JSON.stringify(d));
+}
+function getStreak(){
+  let d=getLogin(),c=0,date=new Date();
+  while(d[date.toDateString()]){
+    c++;date.setDate(date.getDate()-1);
   }
-  c=shuffle(c);
-
-  return {q:`「${x[0]}」の意味は？`,choices:c,correct:c.indexOf(x[1]),exp:`${x[0]}＝${x[1]}`};
+  return c;
 }
 
-// ===== 非言語 =====
+// ===== カレンダー =====
+function calendar(){
+  let d=getLogin(),html="<div class='calendar'>";
+  for(let i=6;i>=0;i--){
+    let day=new Date();day.setDate(day.getDate()-i);
+    let key=day.toDateString();
+    html+=`<div class="day ${d[key]?"done":""} ${i==0?"today":""}">${day.getDate()}</div>`;
+  }
+  return html+"</div>";
+}
+
+// ===== 苦手分析 =====
+function recordWeak(mode,ok){
+  let d=JSON.parse(localStorage.getItem("weak"))||{
+    言語:{ok:0,ng:0},非言語:{ok:0,ng:0},性格:{ok:0,ng:0}
+  };
+  ok?d[mode].ok++:d[mode].ng++;
+  localStorage.setItem("weak",JSON.stringify(d));
+}
+
+function showWeak(){
+  let d=JSON.parse(localStorage.getItem("weak"))||{};
+  screen.innerHTML=`
+  <div class="card">
+    <h2>苦手分析</h2>
+    ${Object.keys(d).map(k=>{
+      let t=d[k].ok+d[k].ng;
+      let r=t?Math.floor(d[k].ok/t*100):0;
+      return `<p>${k}：${r}%</p>`;
+    }).join("")}
+  </div>`;
+}
+
+// ===== デイリー =====
+function getDaily(){
+  let today=new Date().toDateString();
+  let d=JSON.parse(localStorage.getItem("daily"))||{date:today,count:0,done:false};
+  if(d.date!==today)d={date:today,count:0,done:false};
+  localStorage.setItem("daily",JSON.stringify(d));
+  return d;
+}
+function addDaily(){
+  let d=getDaily();
+  d.count++;
+  if(d.count>=5&&!d.done){
+    d.done=true;
+    speak("達成");
+    addXP(20);
+  }
+  localStorage.setItem("daily",JSON.stringify(d));
+}
+
+// ===== 問題生成（強化版） =====
+function genWord(){
+  const list=[
+    ["迅速","素早い"],["慎重","注意深い"],["曖昧","不明確"],
+    ["顕著","目立つ"],["柔軟","しなやか"]
+  ];
+  let x=list[Math.floor(Math.random()*list.length)];
+  let choices=[x[1],"遅い","弱い","重い"].sort(()=>Math.random()-0.5);
+  return {q:`「${x[0]}」の意味は？`,choices,correct:choices.indexOf(x[1]),exp:`${x[0]}＝${x[1]}`};
+}
+
 function genMath(){
-  let type=rand(0,4),q,correct;
-
-  if(type===0){let a=rand(5,20),b=rand(5,20);correct=a+b;q=`${a}+${b}`;}
-  if(type===1){let a=rand(10,30),b=rand(1,10);correct=a-b;q=`${a}-${b}`;}
-  if(type===2){let a=rand(2,9),b=rand(2,9);correct=a*b;q=`${a}×${b}`;}
-  if(type===3){let b=rand(2,9);correct=rand(2,9);q=`${b*correct}÷${b}`;}
-  if(type===4){let s=rand(1,5),d=rand(2,5);correct=s+d*3;q=`${s},${s+d},${s+d*2},?`;}
-
-  let c=shuffle([correct,correct+1,correct-1,correct+2]);
-  return {q:q,choices:c,correct:c.indexOf(correct),exp:`答え：${correct}`};
+  let a=Math.floor(Math.random()*20)+1;
+  let b=Math.floor(Math.random()*20)+1;
+  let c=a+b;
+  let choices=[c,c+1,c-1,c+2].sort(()=>Math.random()-0.5);
+  return {q:`${a}+${b}=?`,choices,correct:choices.indexOf(c),exp:`${a}+${b}=${c}`};
 }
 
-// ===== 性格 =====
 function genPerson(){
-  return {q:"あなたに近いのは？",choices:["計画型","直感型","協調型","単独型"],correct:null,exp:"記録用"};
+  return {q:"あなたに近いのは？",
+    choices:["計画型","直感型","協調型","単独型"],
+    correct:null,exp:"正解なし"};
 }
 
-// ===== 問題取得 =====
 function getQ(){
-  if(currentMode==="言語") return genWord();
-  if(currentMode==="非言語") return genMath();
+  if(currentMode==="言語")return genWord();
+  if(currentMode==="非言語")return genMath();
   return genPerson();
 }
 
-// ===== 学習 =====
-function studySelect(){
-  screen.innerHTML=`
-  <div class="card">
-    <h2>学習モード</h2>
-    <div class="btn" onclick="startStudy('言語')">言語</div>
-    <div class="btn" onclick="startStudy('非言語')">非言語</div>
-    <div class="btn" onclick="startStudy('性格')">性格</div>
-  </div>`;
+// ===== 手書き =====
+function initMemo(){
+  const c=document.getElementById("memo");
+  const ctx=c.getContext("2d");
+  c.width=c.offsetWidth;
+  c.height=c.offsetHeight;
+  let drawing=false;
+
+  c.addEventListener("touchstart",()=>drawing=true);
+  c.addEventListener("touchmove",e=>{
+    if(!drawing)return;
+    let t=e.touches[0];
+    let r=c.getBoundingClientRect();
+    ctx.lineWidth=3;
+    ctx.strokeStyle="#00f2fe";
+    ctx.lineTo(t.clientX-r.left,t.clientY-r.top);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(t.clientX-r.left,t.clientY-r.top);
+  });
+  c.addEventListener("touchend",()=>{drawing=false;ctx.beginPath();});
 }
 
-function startStudy(m){
-  currentMode=m;
-  nextStudy();
+function clearMemo(){
+  let c=document.getElementById("memo");
+  c.getContext("2d").clearRect(0,0,c.width,c.height);
 }
 
-function nextStudy(){
-  let q=getQ();
-  currentQ=q;
+// ===== 画面 =====
+function changeTab(tab,el){
+  let html="";
+  const p=Math.floor((user.xp/nextXP())*100);
+  const d=getDaily();
 
-  screen.innerHTML=`
-  <div class="card">
-    <h2>${q.q}</h2>
-    ${q.choices.map((c,i)=>`<div class="btn" onclick="answer(${i})">${c}</div>`).join("")}
-    <p id="result"></p>
-    <p id="exp"></p>
-    <p>🔥 ${combo}</p>
-    <div class="btn" onclick="nextStudy()">次へ</div>
-  </div>`;
+  if(tab==="home"){
+    html=`
+    <div class="card">
+      <h2>Lv.${user.level}</h2>
+      <p>あと ${nextXP()-user.xp} XP</p>
+      <div class="progress"><div class="bar" style="width:${p}%"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>🔥 ${getStreak()}日ログイン</h3>
+      ${calendar()}
+    </div>
+
+    <div class="card">
+      <h3>🎯 今日 ${d.count}/5</h3>
+      ${d.done?"達成済み":""}
+    </div>
+
+    <div class="card">
+      <h3>🎮 モード選択</h3>
+      <div class="btn" onclick="startMode('言語')">言語</div>
+      <div class="btn" onclick="startMode('非言語')">非言語</div>
+      <div class="btn" onclick="startMode('性格')">性格</div>
+    </div>`;
+  }
+
+  if(tab==="study"){
+    let q=getQ();
+    currentQ=q;
+
+    html=`
+    <div class="card">
+      <h2>${q.q}</h2>
+      ${q.choices.map((c,i)=>`<div class="btn" onclick="answer(${i})">${c}</div>`).join("")}
+      <div class="btn" onclick="answer('skip')">🤔 分からない</div>
+      <p id="result"></p>
+      <p id="exp"></p>
+      <p>🔥 コンボ ${combo}</p>
+
+      <canvas id="memo"></canvas>
+      <div class="btn" onclick="clearMemo()">メモ消す</div>
+
+      <div class="btn" onclick="changeTab('study')">次へ ▶</div>
+    </div>`;
+  }
+
+  screen.innerHTML=html;
+  document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
+  if(el) el.classList.add("active");
+
+  setTimeout(()=>{if(tab==="study")initMemo();},100);
 }
 
+// ===== 回答 =====
 function answer(i){
+
   if(currentQ.correct===null){
     result.innerText="記録";
     exp.innerText=currentQ.exp;
     return;
   }
 
+  if(i==="skip"){
+    result.innerText="🤔 分からない";
+    exp.innerText=currentQ.exp;
+    combo=0;
+    return;
+  }
+
   if(i===currentQ.correct){
-    result.innerText="⭕";
+    result.innerText="⭕ 正解";
     combo++;
-    addXP(10);
+    addXP(10+combo);
+    recordWeak(currentMode,true);
   }else{
     result.innerText="❌";
     combo=0;
+    recordWeak(currentMode,false);
   }
+
   exp.innerText=currentQ.exp;
+  addDaily();
+  updateLogin();
 }
 
-// ===== 模擬試験 =====
-let exam={};
-
-function examMenu(){
-  screen.innerHTML=`
-  <div class="card">
-    <h2>模擬試験</h2>
-    <div class="btn" onclick="startExam('言語')">言語</div>
-    <div class="btn" onclick="startExam('非言語')">非言語</div>
-    <div class="btn" onclick="startExam('性格')">性格</div>
-  </div>`;
+// ===== 初期 =====
+function render(){
+  changeTab("home",document.querySelector(".nav div"));
 }
 
-function startExam(type){
-  exam={type:type,total:10,current:0,correct:0,start:Date.now(),limit:90};
-  currentMode=type;
-  nextExam();
-}
-
-function nextExam(){
-  let remain=exam.limit-Math.floor((Date.now()-exam.start)/1000);
-  if(remain<=0||exam.current>=exam.total) return finishExam();
-
-  let q=getQ();
-  currentQ=q;
-
-  screen.innerHTML=`
-  <div class="card">
-    <h3>⏱ ${remain}</h3>
-    <p>${exam.current+1}/${exam.total}</p>
-    <h2>${q.q}</h2>
-    ${q.choices.map((c,i)=>`<div class="btn" onclick="answerExam(${i})">${c}</div>`).join("")}
-  </div>`;
-
-  setTimeout(nextExam,1000);
-}
-
-function answerExam(i){
-  if(currentQ.correct!==null && i===currentQ.correct) exam.correct++;
-  exam.current++;
-  nextExam();
-}
-
-function finishExam(){
-  let rate=Math.floor((exam.correct/exam.total)*100);
-  screen.innerHTML=`
-  <div class="card">
-    <h2>結果</h2>
-    <p>${exam.correct}/${exam.total}</p>
-    <p>${rate}%</p>
-    <h3>${judge(rate)}</h3>
-    <div class="btn" onclick="home()">戻る</div>
-  </div>`;
-}
-
-function judge(r){
-  if(r>=80) return "S";
-  if(r>=60) return "A";
-  if(r>=40) return "B";
-  return "C";
-}
-
-// ===== ホーム =====
-function home(){
-  let p=Math.floor((user.xp/nextXP())*100);
-  screen.innerHTML=`
-  <div class="card">
-    <h2>Lv.${user.level}</h2>
-    <p>${user.xp}/${nextXP()}</p>
-    <div class="progress"><div class="bar" style="width:${p}%"></div></div>
-  </div>
-  `;
-}
-
-home();
-
-</script>
-</body>
+</script></body>
 </html>
