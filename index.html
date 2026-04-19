@@ -8,23 +8,20 @@
 <style>
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  font-family:sans-serif;
   background:linear-gradient(135deg,#1f2a44,#0a3d62,#0f2027);
   color:#fff;
 }
 
 .header{
-  padding:18px;
+  padding:16px;
   text-align:center;
   background:rgba(255,255,255,0.05);
-  font-size:18px;
 }
 
 .main{
   padding:15px;
   padding-bottom:100px;
-  max-width:500px;
-  margin:auto;
 }
 
 .card{
@@ -40,11 +37,7 @@ body{
   border-radius:15px;
   margin-top:12px;
   text-align:center;
-  font-weight:bold;
 }
-
-.progress{height:10px;background:#333;border-radius:10px;}
-.bar{height:100%;background:linear-gradient(90deg,#00f2fe,#4facfe);}
 
 .nav{
   position:fixed;
@@ -54,14 +47,6 @@ body{
   display:flex;
   justify-content:space-around;
   padding:10px 0;
-}
-
-canvas{
-  width:100%;
-  height:180px;
-  background:#111;
-  border-radius:10px;
-  margin-top:10px;
 }
 </style>
 </head>
@@ -74,18 +59,20 @@ canvas{
 <div class="nav">
   <div onclick="changeTab('home')">🏠</div>
   <div onclick="changeTab('study')">📚</div>
-  <div onclick="showWeak()">📊</div>
 </div>
 
 <script>
 
-// ===== データ =====
-let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
+// ★これ追加が重要（これが原因）
+const screen = document.getElementById("screen");
+
+// データ
+let user={xp:0,level:1};
 let combo=0;
 let currentMode="非言語";
 let currentQ=null;
 
-// ===== XP =====
+// XP
 function nextXP(){return user.level*50;}
 function addXP(v){
   user.xp+=v;
@@ -93,148 +80,44 @@ function addXP(v){
     user.xp=0;
     user.level++;
   }
-  localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== 苦手分析 =====
-function recordWeak(mode,ok){
-  let d=JSON.parse(localStorage.getItem("weak"))||{
-    言語:{ok:0,ng:0},
-    非言語:{ok:0,ng:0},
-    性格:{ok:0,ng:0}
-  };
-  ok?d[mode].ok++:d[mode].ng++;
-  localStorage.setItem("weak",JSON.stringify(d));
-}
-
-function showWeak(){
-  let d=JSON.parse(localStorage.getItem("weak"))||{};
-  screen.innerHTML=`
-  <div class="card">
-    <h2>苦手分析</h2>
-    ${Object.keys(d).map(k=>{
-      let t=d[k].ok+d[k].ng;
-      let r=t?Math.floor(d[k].ok/t*100):0;
-      return `<p>${k}：${r}%</p>`;
-    }).join("")}
-  </div>`;
-}
-
-// ===== 共通問題生成 =====
-function makeQ(q,correct,exp){
+// 問題生成
+function makeQ(q,correct){
   let choices=[correct,correct+1,correct-1,correct+2]
     .sort(()=>Math.random()-0.5);
-  return {
-    q,
-    choices,
-    correct:choices.indexOf(correct),
-    exp
-  };
+  return {q,choices,correct:choices.indexOf(correct)};
 }
 
-// ===== 非言語（強化版） =====
 function genMath(){
+  const type=Math.floor(Math.random()*3);
 
-  const type = Math.floor(Math.random()*4);
-
-  // 足し算
   if(type===0){
-    let a=Math.floor(Math.random()*30)+1;
-    let b=Math.floor(Math.random()*30)+1;
-    let c=a+b;
-    return makeQ(`${a}+${b}=?`,c,`${a}+${b}=${c}`);
+    let a=10,b=5;
+    return makeQ(`${a}+${b}=?`,a+b);
   }
 
-  // 割合
   if(type===1){
-    let a=Math.floor(Math.random()*50)+50;
-    let b=[10,20,30,40][Math.floor(Math.random()*4)];
-    let ans=a*b/100;
-    return makeQ(`${a}の${b}%は？`,ans,`${a}×${b}%=${ans}`);
+    return makeQ(`100の20%は？`,20);
   }
 
-  // 比
   if(type===2){
-    let total=50;
-    let a=2,b=3;
-    let ans=total*(a/(a+b));
-    return makeQ(`A:B=2:3 合計50のときAは？`,ans,`50×2/5=${ans}`);
-  }
-
-  // 速度
-  if(type===3){
-    let speed=60;
-    let time=2;
-    let dist=speed*time;
-    return makeQ(`時速${speed}kmで${time}時間進むと距離は？`,dist,`${speed}×${time}=${dist}`);
+    return makeQ(`A:B=2:3 合計50 Aは？`,20);
   }
 }
 
-// ===== 言語 =====
-function genWord(){
-  const list=[
-    ["迅速","素早い"],
-    ["慎重","注意深い"],
-    ["柔軟","変化に対応できる"],
-    ["曖昧","不明確"]
-  ];
-  let x=list[Math.floor(Math.random()*list.length)];
-  let choices=[x[1],"遅い","弱い","重い"].sort(()=>Math.random()-0.5);
-
-  return {
-    q:`「${x[0]}」の意味は？`,
-    choices,
-    correct:choices.indexOf(x[1]),
-    exp:`${x[0]}＝${x[1]}`
-  };
-}
-
-// ===== 問題取得 =====
 function getQ(){
-  if(currentMode==="言語") return genWord();
   return genMath();
 }
 
-// ===== 手書き =====
-function initMemo(){
-  const c=document.getElementById("memo");
-  const ctx=c.getContext("2d");
-  c.width=c.offsetWidth;
-  c.height=c.offsetHeight;
-  let drawing=false;
-
-  c.addEventListener("touchstart",()=>drawing=true);
-  c.addEventListener("touchmove",e=>{
-    if(!drawing)return;
-    let t=e.touches[0];
-    let r=c.getBoundingClientRect();
-    ctx.lineWidth=3;
-    ctx.strokeStyle="#00f2fe";
-    ctx.lineTo(t.clientX-r.left,t.clientY-r.top);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(t.clientX-r.left,t.clientY-r.top);
-  });
-  c.addEventListener("touchend",()=>{drawing=false;ctx.beginPath();});
-}
-
-// ===== 画面 =====
+// 画面
 function changeTab(tab){
 
   if(tab==="home"){
-    const p=Math.floor((user.xp/nextXP())*100);
-
     screen.innerHTML=`
     <div class="card">
-      <h2>Lv.${user.level}</h2>
-      <p>あと ${nextXP()-user.xp} XP</p>
-      <div class="progress"><div class="bar" style="width:${p}%"></div></div>
-    </div>
-
-    <div class="card">
-      <h3>モード選択</h3>
-      <div class="btn" onclick="startMode('非言語')">非言語</div>
-      <div class="btn" onclick="startMode('言語')">言語</div>
+      <h2>SPIトレーニング</h2>
+      <div class="btn" onclick="changeTab('study')">▶ 学習開始</div>
     </div>`;
   }
 
@@ -245,57 +128,29 @@ function changeTab(tab){
     screen.innerHTML=`
     <div class="card">
       <h2>${q.q}</h2>
-
       ${q.choices.map((c,i)=>
         `<div class="btn" onclick="answer(${i})">${c}</div>`
       ).join("")}
-
-      <div class="btn" onclick="answer('skip')">🤔 分からない</div>
-
       <p id="result"></p>
-      <p id="exp"></p>
-      <p>🔥 コンボ ${combo}</p>
-
-      <canvas id="memo"></canvas>
-      <div class="btn" onclick="changeTab('study')">次の問題 ▶</div>
     </div>`;
-
-    setTimeout(initMemo,100);
   }
 }
 
-// ===== モード開始 =====
-function startMode(m){
-  currentMode=m;
-  changeTab("study");
-}
-
-// ===== 回答 =====
+// 回答
 function answer(i){
-
-  if(i==="skip"){
-    result.innerText="🤔 スキップ";
-    combo=0;
-    return;
-  }
+  const result=document.getElementById("result");
 
   if(i===currentQ.correct){
     result.innerText="⭕ 正解";
-    combo++;
-    addXP(10+combo);
-    recordWeak(currentMode,true);
   }else{
     result.innerText="❌ 不正解";
-    combo=0;
-    recordWeak(currentMode,false);
   }
-
-  exp.innerText=currentQ.exp;
 }
 
 // 初期表示
 changeTab("home");
 
 </script>
+
 </body>
 </html>
