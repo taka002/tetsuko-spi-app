@@ -12,7 +12,6 @@ body{
   background:#111;
   color:#fff;
 }
-
 body.light{ background:#f5f5f5; color:#111; }
 body.blue{ background:#0d1b2a; color:#fff; }
 
@@ -115,29 +114,21 @@ function speakText(text){
 
 // ===== 問題 =====
 let questions = [
-  { q:"3 + 5 = ?", choices:["6","7","8","9"], correct:2, explanation:"3+5=8です" },
-  { q:"10 ÷ 2 = ?", choices:["2","3","5","8"], correct:2, explanation:"10÷2=5です" }
+  { q:"3 + 5 = ?", choices:["6","7","8","9"], correct:2, explanation:"3+5=8です" }
 ];
 
 let current = 0;
-let stats = JSON.parse(localStorage.getItem("stats")) || {};
 
 // ===== 画面 =====
 function changeTab(tab, el){
   let html = "";
 
   if(tab==="home"){
-    const msg = getMessage();
     html = `
     <div class="card">
       <h3>今日の一言</h3>
-      <p>${msg}</p>
-    </div>
-    <div class="card">
-      <h3>試験まで</h3>
-      <p>${getCountdown()}</p>
+      <p>今日も一歩進みましょう</p>
     </div>`;
-    speakText(msg);
   }
 
   if(tab==="study"){
@@ -145,7 +136,7 @@ function changeTab(tab, el){
 
     html = `
     <div class="card">
-      <h3>問題 ${current+1}</h3>
+      <h3>問題</h3>
       <p>${q.q}</p>
 
       ${q.choices.map((c,i)=>
@@ -155,35 +146,21 @@ function changeTab(tab, el){
       <p id="result"></p>
       <div id="explain"></div>
 
-      <div class="btn" onclick="aiExplain()">🤖 AIで解説</div>
+      <div class="btn" onclick="aiExplain()">🤖 AI解説</div>
 
-      <!-- 🔥 深掘り -->
+      <!-- 🔥 ①画像 -->
+      <input type="file" accept="image/*" onchange="analyzeImage(this)">
+      <div class="btn" onclick="alert('画像を選んで')">📸 画像で解説</div>
+
+      <!-- 🔥 ②カメラ -->
+      <input type="file" accept="image/*" capture="environment" onchange="analyzeImage(this)">
+      <div class="btn">📷 カメラで解説</div>
+
+      <!-- 深掘り -->
       <input id="deepInput" placeholder="どこが分からない？">
-      <div class="btn" onclick="deepExplain()">🔍 深掘り質問</div>
+      <div class="btn" onclick="deepExplain()">🔍 深掘り</div>
 
-      <div class="btn" onclick="nextQuestion()">次の問題</div>
-    </div>`;
-  }
-
-  if(tab==="ai"){
-    html = `
-    <div class="card">
-      <h3>AI相談</h3>
-      <input id="aiInput">
-      <div class="btn" onclick="aiTalk()">送信</div>
-      <p id="aiReply"></p>
-    </div>`;
-  }
-
-  if(tab==="setting"){
-    html = `
-    <div class="card">
-      <h3>テーマ</h3>
-      <select onchange="setTheme(this.value)">
-        <option value="dark">ダーク</option>
-        <option value="blue">ブルー</option>
-        <option value="light">ライト</option>
-      </select>
+      <div class="btn" onclick="nextQuestion()">次</div>
     </div>`;
   }
 
@@ -196,16 +173,12 @@ function changeTab(tab, el){
 function answer(i){
   const q = questions[current];
 
-  if(!stats[current]) stats[current]={wrong:0,count:0};
-  stats[current].count++;
-
   if(i===q.correct){
     document.getElementById("result").innerText="⭕ 正解";
     speakText("正解よ");
   }else{
     document.getElementById("result").innerText="❌ 不正解";
     speakText("違うわね");
-    stats[current].wrong++;
   }
 
   document.getElementById("explain").innerHTML=q.explanation;
@@ -214,20 +187,54 @@ function answer(i){
 // ===== AI解説 =====
 async function aiExplain(){
   const q = questions[current];
+
   document.getElementById("explain").innerText="AI解説中...";
 
   const res = await fetch("/api/explain",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({
-      question: q.q + " 正解: " + q.choices[q.correct]
+      question: q.q
     })
   });
 
   const data = await res.json();
-
   document.getElementById("explain").innerHTML=data.reply;
   speakText(data.reply);
+}
+
+// ===== 🔥①② 画像解析 =====
+async function analyzeImage(input){
+
+  const file = input.files[0];
+  if(!file){
+    alert("画像選んで");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = async function(){
+    const base64 = reader.result;
+
+    document.getElementById("explain").innerText="画像解析中...";
+
+    const res = await fetch("/api/vision",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        image: base64,
+        question: "この問題を分かりやすく解説して"
+      })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("explain").innerHTML=data.reply;
+    speakText(data.reply);
+  };
+
+  reader.readAsDataURL(file);
 }
 
 // ===== 深掘り =====
@@ -243,9 +250,8 @@ async function deepExplain(){
     body: JSON.stringify({
       question: `
 問題:${q.q}
-正解:${q.choices[q.correct]}
 質問:${userQ}
-図や表を使って説明して
+図や表で説明して
 `
     })
   });
@@ -258,13 +264,8 @@ async function deepExplain(){
 
 // ===== 次 =====
 function nextQuestion(){
-  current = (current+1)%questions.length;
   changeTab("study", document.querySelectorAll(".nav div")[1]);
 }
-
-// ===== 補助 =====
-function getMessage(){ return "今日も一歩進みましょう"; }
-function getCountdown(){ return "あと 未設定 日"; }
 
 // 初期
 changeTab("home", document.querySelector(".nav div"));
