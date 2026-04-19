@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>徹子AI</title>
+<title>徹子AI SPI版</title>
 
 <style>
 body{
@@ -59,7 +59,6 @@ body{
   background:#333;
   border-radius:10px;
 }
-
 .bar{
   height:100%;
   background:linear-gradient(90deg,#00f2fe,#4facfe);
@@ -96,7 +95,6 @@ body{
 
 <body>
 
-<!-- スプラッシュ -->
 <div id="splash">
   <div style="text-align:center">
     <div class="glow"></div>
@@ -105,7 +103,7 @@ body{
   </div>
 </div>
 
-<div class="header">📱 徹子AI</div>
+<div class="header">📱 徹子AI SPI</div>
 <div class="main" id="screen"></div>
 
 <div class="nav">
@@ -115,7 +113,7 @@ body{
 
 <script>
 
-// ===== DOM安全取得 =====
+// ===== 安全DOM =====
 function getScreen(){
   return document.getElementById("screen");
 }
@@ -128,32 +126,33 @@ function speak(text){
 }
 
 // ===== 起動 =====
+window.onload = () => startApp();
+
 function startApp(){
-  speak("こんにちは、徹子です");
-
   const s=document.getElementById("splash");
-  if(s) s.style.display="none";
-
-  updateLogin();
-  render();
+  if(s) s.onclick = () => {
+    speak("こんにちは、徹子です");
+    s.style.display="none";
+    updateLogin();
+    render();
+  };
 }
 
 // ===== データ =====
 let user = JSON.parse(localStorage.getItem("user")) || {xp:0,level:1};
 let combo = 0;
+let current = 0;
 
 // ===== XP =====
 function nextXP(){ return user.level * 50; }
 
 function addXP(v){
   user.xp += v;
-
   if(user.xp >= nextXP()){
     user.xp = 0;
     user.level++;
     speak("レベルアップ");
   }
-
   save();
 }
 
@@ -173,11 +172,8 @@ function getStreak(){
   let login = getLoginData();
   let count=0;
   let d=new Date();
-
-  while(true){
-    const key=d.toDateString();
-    if(login[key]) count++;
-    else break;
+  while(login[d.toDateString()]){
+    count++;
     d.setDate(d.getDate()-1);
   }
   return count;
@@ -187,21 +183,15 @@ function getStreak(){
 function renderCalendar(){
   let login = getLoginData();
   let html="<div class='calendar'>";
-
   for(let i=6;i>=0;i--){
     let d=new Date();
     d.setDate(d.getDate()-i);
-    const key=d.toDateString();
-
     let cls="day";
-    if(login[key]) cls+=" done";
+    if(login[d.toDateString()]) cls+=" done";
     if(i===0) cls+=" today";
-
     html+=`<div class="${cls}">${d.getDate()}</div>`;
   }
-
-  html+="</div>";
-  return html;
+  return html+"</div>";
 }
 
 // ===== デイリー =====
@@ -235,29 +225,32 @@ function addDaily(){
   localStorage.setItem("daily",JSON.stringify(d));
 }
 
-// ===== 問題 =====
+// ===== SPI問題 =====
 let questions=[
-  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2}
+
+  {type:"言語",q:"「迅速」の意味は？",choices:["遅い","素早い","重い","弱い"],correct:1,explanation:"迅速＝すばやい"},
+  {type:"非言語",q:"20%引きで800円。元値は？",choices:["900","1000","1200","1600"],correct:1,explanation:"800÷0.8=1000"},
+  {type:"論理",q:"A>B、B>C。最も低いのは？",choices:["A","B","C","不明"],correct:2,explanation:"A>B>C"}
+
 ];
 
 // ===== 画面 =====
 function changeTab(tab,el){
-  const screen = getScreen();
+  const screen=getScreen();
   if(!screen) return;
 
-  let html="";
   const percent=Math.floor((user.xp/nextXP())*100);
   const daily=getDaily();
   const yesterday=getYesterday();
+
+  let html="";
 
   if(tab==="home"){
     html=`
     <div class="card">
       <h2>Lv.${user.level}</h2>
       <p>あと ${nextXP()-user.xp} XP</p>
-      <div class="progress">
-        <div class="bar" style="width:${percent}%"></div>
-      </div>
+      <div class="progress"><div class="bar" style="width:${percent}%"></div></div>
     </div>
 
     <div class="card">
@@ -267,27 +260,26 @@ function changeTab(tab,el){
 
     <div class="card">
       <h3>🎯 今日</h3>
-      <p>${daily.count}/5 問</p>
-      ${daily.done ? "<p>🎉 完了！</p>" : ""}
+      <p>${daily.count}/5</p>
     </div>
 
     <div class="card">
       <h3>📅 昨日</h3>
-      <p>${yesterday.count}/5 問</p>
-      ${yesterday.done ? "<p>✔ 達成済み</p>" : "<p>未達成</p>"}
+      <p>${yesterday.count}/5</p>
     </div>
 
-    <div class="btn" onclick="changeTab('study', document.querySelectorAll('.nav div')[1])">
+    <div class="btn" onclick="changeTab('study',document.querySelectorAll('.nav div')[1])">
       ▶ 学習スタート
     </div>
     `;
   }
 
   if(tab==="study"){
-    const q=questions[0];
+    const q=questions[current];
 
     html=`
     <div class="card">
+      <p>${q.type}</p>
       <h2>${q.q}</h2>
 
       ${q.choices.map((c,i)=>
@@ -295,6 +287,7 @@ function changeTab(tab,el){
       ).join("")}
 
       <p id="result"></p>
+      <p id="explain"></p>
       <p>🔥 コンボ ${combo}</p>
     </div>
     `;
@@ -308,23 +301,27 @@ function changeTab(tab,el){
 
 // ===== 判定 =====
 function answer(i){
-  const q=questions[0];
+  const q=questions[current];
 
-  const resultEl = document.getElementById("result");
+  const result=document.getElementById("result");
+  const explain=document.getElementById("explain");
 
   if(i===q.correct){
-    resultEl.innerText="⭕ 正解";
+    result.innerText="⭕ 正解";
     combo++;
     addXP(10+combo);
   }else{
-    resultEl.innerText="❌";
+    result.innerText="❌ 不正解";
     combo=0;
     addXP(2);
   }
 
+  explain.innerText=q.explanation;
+
   addDaily();
   updateLogin();
-  render();
+
+  current = (current+1) % questions.length;
 }
 
 // ===== 保存 =====
@@ -332,15 +329,10 @@ function save(){
   localStorage.setItem("user",JSON.stringify(user));
 }
 
-// ===== 描画 =====
+// ===== 初期描画 =====
 function render(){
-  changeTab("home", document.querySelector(".nav div"));
+  changeTab("home",document.querySelector(".nav div"));
 }
-
-// ===== 初期起動（絶対安全） =====
-window.onload = () => {
-  startApp();
-};
 
 </script>
 
