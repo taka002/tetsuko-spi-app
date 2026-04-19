@@ -13,7 +13,55 @@ body{
   color:#fff;
 }
 
-/* ヘッダー */
+/* ===== スプラッシュ ===== */
+#splash{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+}
+
+.splash-inner{
+  text-align:center;
+}
+
+.glow{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  background:radial-gradient(circle,#00f2fe,transparent);
+  margin:0 auto 20px;
+  animation:pulse 2s infinite;
+}
+
+@keyframes pulse{
+  0%{ transform:scale(0.8); opacity:0.6; }
+  50%{ transform:scale(1.2); opacity:1; }
+  100%{ transform:scale(0.8); opacity:0.6; }
+}
+
+.loader{
+  width:40px;
+  height:40px;
+  border:4px solid rgba(255,255,255,0.2);
+  border-top:4px solid #00f2fe;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+  margin:auto;
+}
+
+@keyframes spin{
+  to{ transform:rotate(360deg); }
+}
+
+/* ===== UI ===== */
+
 .header{
   padding:18px;
   text-align:center;
@@ -23,13 +71,11 @@ body{
   backdrop-filter:blur(10px);
 }
 
-/* メイン */
 .main{
   padding:15px;
   padding-bottom:90px;
 }
 
-/* カード */
 .card{
   background:rgba(255,255,255,0.05);
   backdrop-filter:blur(12px);
@@ -41,19 +87,6 @@ body{
     inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
-/* タイトル */
-.card h3{
-  margin:0 0 10px;
-  font-size:18px;
-}
-
-/* テキスト */
-.card p{
-  font-size:15px;
-  opacity:0.9;
-}
-
-/* ボタン */
 .btn{
   background:linear-gradient(135deg,#4facfe,#00f2fe);
   padding:14px;
@@ -62,26 +95,18 @@ body{
   text-align:center;
   font-weight:600;
   box-shadow:0 6px 15px rgba(0,0,0,0.3);
-  transition:0.2s;
 }
 
-.btn:active{
-  transform:scale(0.96);
-}
-
-/* 入力 */
 input{
   width:100%;
   padding:12px;
   border-radius:12px;
   margin-top:10px;
   border:none;
-  outline:none;
   background:rgba(255,255,255,0.1);
   color:#fff;
 }
 
-/* ナビ */
 .nav{
   position:fixed;
   bottom:0;
@@ -101,15 +126,20 @@ input{
 .active{
   color:#00f2fe;
 }
-
-#explain{
-  margin-top:10px;
-  line-height:1.6;
-}
 </style>
 </head>
 
 <body>
+
+<!-- 🔥 スプラッシュ -->
+<div id="splash">
+  <div class="splash-inner">
+    <div class="glow"></div>
+    <h1>徹子AI</h1>
+    <p>あなた専属の家庭教師</p>
+    <div class="loader"></div>
+  </div>
+</div>
 
 <div class="header">📱 徹子AI</div>
 <div class="main" id="screen"></div>
@@ -117,22 +147,21 @@ input{
 <div class="nav">
   <div onclick="changeTab('home', this)" class="active">🏠<br>ホーム</div>
   <div onclick="changeTab('study', this)">📚<br>学習</div>
-  <div onclick="changeTab('ai', this)">🤖<br>AI</div>
-  <div onclick="changeTab('setting', this)">⚙️<br>設定</div>
 </div>
 
 <script>
-// ===== 設定 =====
-let settings = JSON.parse(localStorage.getItem("settings")) || {
-  voice:true
+
+// ===== スプラッシュ終了 =====
+window.onload = () => {
+  setTimeout(()=>{
+    document.getElementById("splash").style.display="none";
+  },2000);
 };
 
 // ===== 音声 =====
 function speakText(text){
-  if(!settings.voice) return;
-  const uttr = new SpeechSynthesisUtterance(text);
+  const uttr=new SpeechSynthesisUtterance(text);
   uttr.lang="ja-JP";
-  uttr.pitch=1.2;
   speechSynthesis.speak(uttr);
 }
 
@@ -171,12 +200,6 @@ function changeTab(tab,el){
       <div id="explain"></div>
 
       <div class="btn" onclick="aiExplain()">🤖 AI解説</div>
-
-      <input type="file" accept="image/*" onchange="analyzeImage(this)">
-      <div class="btn" onclick="alert('画像選んで')">📸 画像で解説</div>
-
-      <input type="file" accept="image/*" capture="environment" onchange="analyzeImage(this)">
-      <div class="btn">📷 カメラ</div>
 
       <input id="deepInput" placeholder="どこが分からない？">
       <div class="btn" onclick="deepExplain()">🔍 深掘り</div>
@@ -218,34 +241,6 @@ async function aiExplain(){
 
   const data=await res.json();
   explain.innerHTML=data.reply;
-  speakText(data.reply);
-}
-
-// ===== 画像 =====
-async function analyzeImage(input){
-  const file=input.files[0];
-  if(!file){alert("画像選んで");return;}
-
-  const reader=new FileReader();
-
-  reader.onload=async function(){
-    explain.innerText="解析中...";
-
-    const res=await fetch("/api/vision",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        image:reader.result,
-        question:"この問題を解説して"
-      })
-    });
-
-    const data=await res.json();
-    explain.innerHTML=data.reply;
-    speakText(data.reply);
-  };
-
-  reader.readAsDataURL(file);
 }
 
 // ===== 深掘り =====
@@ -265,7 +260,6 @@ async function deepExplain(){
 
   const data=await res.json();
   explain.innerHTML=data.reply;
-  speakText(data.reply);
 }
 
 // ===== 次 =====
