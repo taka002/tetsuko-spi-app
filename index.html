@@ -8,47 +8,86 @@
 <style>
 body{
   margin:0;
-  font-family:sans-serif;
-  background:#111;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background:linear-gradient(135deg,#1e1e2f,#0f2027);
   color:#fff;
 }
-body.light{ background:#f5f5f5; color:#111; }
-body.blue{ background:#0d1b2a; color:#fff; }
 
+/* ヘッダー */
 .header{
-  padding:15px;
+  padding:18px;
   text-align:center;
-  background:#1c1c1c;
+  font-size:18px;
+  font-weight:600;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
 }
 
+/* メイン */
 .main{
   padding:15px;
-  padding-bottom:80px;
+  padding-bottom:90px;
 }
 
+/* カード */
 .card{
-  background:#222;
-  border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(12px);
+  border-radius:25px;
   padding:20px;
   margin-bottom:15px;
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
-body.light .card{ background:#fff; }
-body.blue .card{ background:#1b263b; }
+/* タイトル */
+.card h3{
+  margin:0 0 10px;
+  font-size:18px;
+}
 
+/* テキスト */
+.card p{
+  font-size:15px;
+  opacity:0.9;
+}
+
+/* ボタン */
 .btn{
-  background:#4caf50;
+  background:linear-gradient(135deg,#4facfe,#00f2fe);
+  padding:14px;
+  border-radius:15px;
+  margin-top:12px;
+  text-align:center;
+  font-weight:600;
+  box-shadow:0 6px 15px rgba(0,0,0,0.3);
+  transition:0.2s;
+}
+
+.btn:active{
+  transform:scale(0.96);
+}
+
+/* 入力 */
+input{
+  width:100%;
   padding:12px;
   border-radius:12px;
   margin-top:10px;
-  text-align:center;
+  border:none;
+  outline:none;
+  background:rgba(255,255,255,0.1);
+  color:#fff;
 }
 
+/* ナビ */
 .nav{
   position:fixed;
   bottom:0;
   width:100%;
-  background:#1c1c1c;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(10px);
   display:flex;
   justify-content:space-around;
   padding:10px 0;
@@ -60,14 +99,7 @@ body.blue .card{ background:#1b263b; }
 }
 
 .active{
-  color:#4caf50;
-}
-
-input, select{
-  width:100%;
-  padding:10px;
-  border-radius:10px;
-  margin-top:10px;
+  color:#00f2fe;
 }
 
 #explain{
@@ -92,39 +124,31 @@ input, select{
 <script>
 // ===== 設定 =====
 let settings = JSON.parse(localStorage.getItem("settings")) || {
-  theme:"dark",
-  personality:"normal",
-  examDate:"",
   voice:true
 };
 
 // ===== 音声 =====
 function speakText(text){
   if(!settings.voice) return;
-
   const uttr = new SpeechSynthesisUtterance(text);
-  uttr.lang = "ja-JP";
-
-  uttr.pitch =
-    settings.personality==="strict" ? 0.8 :
-    settings.personality==="friend" ? 1.4 : 1.2;
-
+  uttr.lang="ja-JP";
+  uttr.pitch=1.2;
   speechSynthesis.speak(uttr);
 }
 
 // ===== 問題 =====
-let questions = [
-  { q:"3 + 5 = ?", choices:["6","7","8","9"], correct:2, explanation:"3+5=8です" }
+let questions=[
+  {q:"3 + 5 = ?",choices:["6","7","8","9"],correct:2,explanation:"3+5=8です"}
 ];
 
-let current = 0;
+let current=0;
 
 // ===== 画面 =====
-function changeTab(tab, el){
-  let html = "";
+function changeTab(tab,el){
+  let html="";
 
   if(tab==="home"){
-    html = `
+    html=`
     <div class="card">
       <h3>今日の一言</h3>
       <p>今日も一歩進みましょう</p>
@@ -132,9 +156,9 @@ function changeTab(tab, el){
   }
 
   if(tab==="study"){
-    const q = questions[current];
+    const q=questions[current];
 
-    html = `
+    html=`
     <div class="card">
       <h3>問題</h3>
       <p>${q.q}</p>
@@ -148,15 +172,12 @@ function changeTab(tab, el){
 
       <div class="btn" onclick="aiExplain()">🤖 AI解説</div>
 
-      <!-- 🔥 ①画像 -->
       <input type="file" accept="image/*" onchange="analyzeImage(this)">
-      <div class="btn" onclick="alert('画像を選んで')">📸 画像で解説</div>
+      <div class="btn" onclick="alert('画像選んで')">📸 画像で解説</div>
 
-      <!-- 🔥 ②カメラ -->
       <input type="file" accept="image/*" capture="environment" onchange="analyzeImage(this)">
-      <div class="btn">📷 カメラで解説</div>
+      <div class="btn">📷 カメラ</div>
 
-      <!-- 深掘り -->
       <input id="deepInput" placeholder="どこが分からない？">
       <div class="btn" onclick="deepExplain()">🔍 深掘り</div>
 
@@ -164,73 +185,63 @@ function changeTab(tab, el){
     </div>`;
   }
 
-  document.getElementById("screen").innerHTML = html;
+  document.getElementById("screen").innerHTML=html;
   document.querySelectorAll(".nav div").forEach(e=>e.classList.remove("active"));
   el.classList.add("active");
 }
 
 // ===== 判定 =====
 function answer(i){
-  const q = questions[current];
+  const q=questions[current];
 
   if(i===q.correct){
-    document.getElementById("result").innerText="⭕ 正解";
+    result.innerText="⭕ 正解";
     speakText("正解よ");
   }else{
-    document.getElementById("result").innerText="❌ 不正解";
+    result.innerText="❌ 不正解";
     speakText("違うわね");
   }
 
-  document.getElementById("explain").innerHTML=q.explanation;
+  explain.innerHTML=q.explanation;
 }
 
-// ===== AI解説 =====
+// ===== AI =====
 async function aiExplain(){
-  const q = questions[current];
+  const q=questions[current];
+  explain.innerText="AI解説中...";
 
-  document.getElementById("explain").innerText="AI解説中...";
-
-  const res = await fetch("/api/explain",{
+  const res=await fetch("/api/explain",{
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      question: q.q
-    })
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({question:q.q})
   });
 
-  const data = await res.json();
-  document.getElementById("explain").innerHTML=data.reply;
+  const data=await res.json();
+  explain.innerHTML=data.reply;
   speakText(data.reply);
 }
 
-// ===== 🔥①② 画像解析 =====
+// ===== 画像 =====
 async function analyzeImage(input){
+  const file=input.files[0];
+  if(!file){alert("画像選んで");return;}
 
-  const file = input.files[0];
-  if(!file){
-    alert("画像選んで");
-    return;
-  }
+  const reader=new FileReader();
 
-  const reader = new FileReader();
+  reader.onload=async function(){
+    explain.innerText="解析中...";
 
-  reader.onload = async function(){
-    const base64 = reader.result;
-
-    document.getElementById("explain").innerText="画像解析中...";
-
-    const res = await fetch("/api/vision",{
+    const res=await fetch("/api/vision",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        image: base64,
-        question: "この問題を分かりやすく解説して"
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        image:reader.result,
+        question:"この問題を解説して"
       })
     });
 
-    const data = await res.json();
-
-    document.getElementById("explain").innerHTML=data.reply;
+    const data=await res.json();
+    explain.innerHTML=data.reply;
     speakText(data.reply);
   };
 
@@ -239,36 +250,31 @@ async function analyzeImage(input){
 
 // ===== 深掘り =====
 async function deepExplain(){
-  const q = questions[current];
-  const userQ = document.getElementById("deepInput").value;
+  const q=questions[current];
+  const userQ=document.getElementById("deepInput").value;
 
-  document.getElementById("explain").innerText="深掘り中...";
+  explain.innerText="深掘り中...";
 
-  const res = await fetch("/api/explain",{
+  const res=await fetch("/api/explain",{
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      question: `
-問題:${q.q}
-質問:${userQ}
-図や表で説明して
-`
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      question:`問題:${q.q} 質問:${userQ}`
     })
   });
 
-  const data = await res.json();
-
-  document.getElementById("explain").innerHTML=data.reply;
+  const data=await res.json();
+  explain.innerHTML=data.reply;
   speakText(data.reply);
 }
 
 // ===== 次 =====
 function nextQuestion(){
-  changeTab("study", document.querySelectorAll(".nav div")[1]);
+  changeTab("study",document.querySelectorAll(".nav div")[1]);
 }
 
 // 初期
-changeTab("home", document.querySelector(".nav div"));
+changeTab("home",document.querySelector(".nav div"));
 </script>
 
 </body>
